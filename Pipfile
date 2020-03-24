@@ -1,0 +1,52 @@
+[[source]]
+name = "pypi"
+url = "https://pypi.org/simple"
+verify_ssl = true
+
+[dev-packages]
+black = "*"
+flake8 = "*"
+jupyter = "*"
+mypy = "*"
+jupyterlab = "*"
+jupytext = "*"
+jupyter-lsp = "*"
+python-language-server = {extras = ["all"],version = "*"}
+
+[packages]
+gokart = "*"
+redshells = "*"
+swifter = "*"
+kanjize = "*"
+jeraconv = "*"
+regex = "*"
+tiny-tokenizer = "*"
+xgboost = "*"
+torch = "*"
+pyknp = "*"
+pytorch-pretrained-bert = "*"
+lightgbm = "*"
+catboost = "*"
+requests = "*"
+skorch = "*"
+scikit-learn = "*"
+thunderbolt = "*"
+neologdn = "*"
+mecab-python3 = "*"
+transformers = "*"
+torchvision = "*"
+sentence-transformers = "*"
+seaborn = "*"
+matplotlib = "*"
+plotly = "*"
+pandas-profiling = {extras = ["html", "notebook"],version = "*"}
+nltk = "*"
+mlflow = "*"
+keras = "*"
+mlxtend = "*"
+
+[requires]
+python_version = "3.7"
+
+[pipenv]
+allow_prereleases = true
