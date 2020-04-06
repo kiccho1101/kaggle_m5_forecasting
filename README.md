@@ -22,20 +22,8 @@ luigid
 mlflow ui
 ```
 
-## Step4. Run cross validation
+## Step4. Create submission file
 
 ```bash
-pipenv run python main.py tweet.CrossValidation
-```
-
-## Step5. Create submission file
-
-```bash
-pipenv run python main.py tweet.CreateSubmissionFile
-```
-
-## Test
-
-```bash
-python -m unittest discover -s ./test/unit_test/
+pipenv run python main.py m5.LGBMSubmission
 ```
