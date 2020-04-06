@@ -1,13 +1,18 @@
 from logging import getLogger
 
 
+from typing import Dict
+from tqdm import tqdm
+import swifter
 from kaggle_m5_forecasting import M5
+from kaggle_m5_forecasting.utils import timer, reduce_mem_usage
 import pandas as pd
+import numpy as np
 
 logger = getLogger(__name__)
 
 
-class Data:
+class RawData:
     def __init__(self):
         self.calendar: pd.DataFrame = pd.DataFrame()
         self.sales_train_validation: pd.DataFrame = pd.DataFrame()
@@ -15,28 +20,28 @@ class Data:
         self.sell_prices: pd.DataFrame = pd.DataFrame()
 
 
-class LoadData(M5):
+class LoadRawData(M5):
     def run(self):
-        d = Data()
+        d = RawData()
 
-        logger.info("loading calendar.csv")
-        d.calendar = pd.read_csv("./m5-forecasting-accuracy/calendar.csv")
-        logger.info("loaded calendar.csv")
+        with timer("load calendar.csv"):
+            d.calendar = pd.read_csv("./m5-forecasting-accuracy/calendar.csv").pipe(
+                reduce_mem_usage
+            )
 
-        logger.info("loading sales_train_validation.csv")
-        d.sales_train_validation = pd.read_csv(
-            "./m5-forecasting-accuracy/sales_train_validation.csv"
-        )
-        logger.info("loaded sales_train_validation.csv")
+        with timer("load sales_train_validation.csv"):
+            d.sales_train_validation = pd.read_csv(
+                "./m5-forecasting-accuracy/sales_train_validation.csv"
+            ).pipe(reduce_mem_usage)
 
-        logger.info("loading sample_submission.csv")
-        d.sample_submission = pd.read_csv(
-            "./m5-forecasting-accuracy/sample_submission.csv"
-        )
-        logger.info("loaded sample_submission.csv")
+        with timer("load sample_submission.csv"):
+            d.sample_submission = pd.read_csv(
+                "./m5-forecasting-accuracy/sample_submission.csv"
+            ).pipe(reduce_mem_usage)
 
-        logger.info("loading sell_prices.csv")
-        d.sell_prices = pd.read_csv("./m5-forecasting-accuracy/sell_prices.csv")
-        logger.info("loaded sell_prices.csv")
+        with timer("load sell_prices.csv"):
+            d.sell_prices = pd.read_csv(
+                "./m5-forecasting-accuracy/sell_prices.csv"
+            ).pipe(reduce_mem_usage)
 
         self.dump(d)
