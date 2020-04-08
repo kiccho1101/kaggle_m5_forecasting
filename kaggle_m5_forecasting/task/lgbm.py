@@ -42,6 +42,7 @@ features: List[str] = [
     # "fe_price_momentum",
     # "fe_price_momentum_m",
     # "fe_price_momentum_y",
+    "shift_t7",
     "shift_t28",
     "shift_t29",
     "shift_t30",
@@ -54,6 +55,10 @@ features: List[str] = [
     "rolling_mean_t28_180",
     "rolling_skew_t28_30",
     "rolling_kurt_t28_30",
+    # "rolling_std_item_t28_7",
+    # "rolling_mean_item_t28_7",
+    # "rolling_mean_item_t28_30",
+    # "rolling_std_item_t28_30",
     "fe_price_change_t1",
     "fe_price_change_t365",
     "fe_rolling_price_std_t7",
@@ -61,6 +66,26 @@ features: List[str] = [
     # "fe_target_mean",
     # "fe_target_std",
     # "fe_target_max",
+]
+
+cat_features: List[str] = [
+    f
+    for f in features
+    if f
+    in [
+        "item_id",
+        "dept_id",
+        "cat_id",
+        "store_id",
+        "state_id",
+        "event_name_1",
+        "event_type_1",
+        "event_name_2",
+        "event_type_2",
+        "snap_CA",
+        "snap_TX",
+        "snap_WI",
+    ]
 ]
 
 params = {
@@ -103,6 +128,7 @@ class LGBMVal(M5):
                 early_stopping_rounds=200,
                 valid_sets=[train_set, val_set],
                 verbose_eval=50,
+                categorical_feature=cat_features,
             )
         with timer("predict val"):
             val_pred = model.predict(val[features], num_iteration=model.best_iteration)
@@ -122,13 +148,14 @@ class LGBMSubmission(M5):
         raw: RawData = self.load("raw")
         data: pd.DataFrame = self.load("data")
         with timer("split into train, val, test"):
-            train = data[data.d <= 1913]
+            train = data[data.d <= 1913][features + ["sales"]]
             test = data[(data.d > 1913)]
             val = data[(data.d > 1885) & (data.d <= 1913)]
+            print("train shape:", train.shape)
 
         train_set = lgb.Dataset(train[features], train["sales"])
         val_set = lgb.Dataset(val[features], val["sales"])
-        del data
+        del data, train, val
         gc.collect()
 
         with timer("train lgbm model"):
@@ -139,6 +166,7 @@ class LGBMSubmission(M5):
                 early_stopping_rounds=200,
                 valid_sets=[train_set, val_set],
                 verbose_eval=50,
+                categorical_feature=cat_features,
             )
 
         with timer("predict test"):

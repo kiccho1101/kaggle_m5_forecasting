@@ -20,7 +20,7 @@ class FERollingMean(M5):
                         .transform(lambda x: x.shift(lag).rolling(w_size).mean())
                         .astype(np.float16)
                     )
-                    data[f"rolling_item_mean_t{lag}_{w_size}"] = (
+                    data[f"rolling_mean_item_t{lag}_{w_size}"] = (
                         data.groupby(["item_id"])["sales"]
                         .transform(lambda x: x.shift(lag).rolling(w_size).mean())
                         .astype(np.float16)
@@ -44,7 +44,7 @@ class FERollingStd(M5):
                         .transform(lambda x: x.shift(lag).rolling(w_size).std())
                         .astype(np.float16)
                     )
-                    data[f"rolling_item_std_t{lag}_{w_size}"] = (
+                    data[f"rolling_std_item_t{lag}_{w_size}"] = (
                         data.groupby(["item_id"])["sales"]
                         .transform(lambda x: x.shift(lag).rolling(w_size).std())
                         .astype(np.float16)
