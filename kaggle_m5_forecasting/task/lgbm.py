@@ -11,6 +11,10 @@ from kaggle_m5_forecasting import M5, CombineFeatures, LoadRawData, RawData
 from kaggle_m5_forecasting.utils import timer
 
 
+START_DAY = 300
+num_boost_round = 2500
+MIN_SUM = 1
+
 features: List[str] = [
     "item_id",
     "dept_id",
@@ -42,7 +46,6 @@ features: List[str] = [
     # "fe_price_momentum",
     # "fe_price_momentum_m",
     # "fe_price_momentum_y",
-    "shift_t7",
     "shift_t28",
     "shift_t29",
     "shift_t30",
@@ -55,6 +58,8 @@ features: List[str] = [
     "rolling_mean_t28_180",
     "rolling_skew_t28_30",
     "rolling_kurt_t28_30",
+    # "rolling_mean_dw_t28_30",
+    # "rolling_mean_dw_store_t28_30",
     # "rolling_std_item_t28_7",
     # "rolling_mean_item_t28_7",
     # "rolling_mean_item_t28_30",
@@ -94,13 +99,13 @@ params = {
     "objective": "poisson",
     "n_jobs": -1,
     "seed": 42,
+    "num_leaves": 128,
+    "min_data_in_leaf": 50,
     "learning_rate": 0.1,
-    "bagging_freq": 10,
+    "bagging_freq": 1,
     "feature_fraction": 0.8,
     "bagging_fraction": 0.75,
 }
-
-num_boost_round = 2500
 
 
 class LGBMVal(M5):
@@ -112,7 +117,11 @@ class LGBMVal(M5):
         data: pd.DataFrame = self.load("data")
 
         with timer("split into train, val, test"):
-            train = data[data.d <= 1885]
+            train = data[
+                (data.d >= START_DAY)
+                & (data.d <= 1885)
+                & (data.rolling_sum_t0_30 >= MIN_SUM)
+            ][features + ["sales"]]
             val = data[(data.d > 1885) & (data.d <= 1913)]
             del data
             gc.collect()
@@ -148,7 +157,11 @@ class LGBMSubmission(M5):
         raw: RawData = self.load("raw")
         data: pd.DataFrame = self.load("data")
         with timer("split into train, val, test"):
-            train = data[data.d <= 1913][features + ["sales"]]
+            train = data[
+                (data.d >= START_DAY)
+                & (data.d <= 1913)
+                & (data.rolling_sum_t0_30 >= MIN_SUM)
+            ][features + ["sales"]]
             test = data[(data.d > 1913)]
             val = data[(data.d > 1885) & (data.d <= 1913)]
             print("train shape:", train.shape)

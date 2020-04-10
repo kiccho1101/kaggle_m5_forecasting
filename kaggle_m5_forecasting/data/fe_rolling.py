@@ -6,6 +6,25 @@ import numpy as np
 import gc
 
 
+class FERollingSum(M5):
+    def requires(self):
+        return MakeData()
+
+    def run(self):
+        data: pd.DataFrame = self.load()
+        with timer("make rolling mean"):
+            for lag in [0]:
+                for w_size in tqdm([10, 30]):
+                    data[f"rolling_sum_t{lag}_{w_size}"] = (
+                        data.groupby(["id"])["sales"]
+                        .transform(lambda x: x.shift(lag).rolling(w_size).sum())
+                        .astype(np.float16)
+                    )
+        df = data.filter(like="rolling_sum")
+        print(df.info())
+        self.dump(df)
+
+
 class FERollingMean(M5):
     def requires(self):
         return MakeData()
@@ -20,12 +39,36 @@ class FERollingMean(M5):
                         .transform(lambda x: x.shift(lag).rolling(w_size).mean())
                         .astype(np.float16)
                     )
-                    data[f"rolling_mean_item_t{lag}_{w_size}"] = (
-                        data.groupby(["item_id"])["sales"]
+                    data[f"rolling_mean_store_t{lag}_{w_size}"] = (
+                        data.groupby(["store_id"])["sales"]
                         .transform(lambda x: x.shift(lag).rolling(w_size).mean())
                         .astype(np.float16)
                     )
         df = data.filter(like="rolling_mean")
+        print(df.info())
+        self.dump(df)
+
+
+class FERollingMeanDW(M5):
+    def requires(self):
+        return MakeData()
+
+    def run(self):
+        data: pd.DataFrame = self.load()
+        with timer("make rolling mean"):
+            for lag in [28]:
+                for w_size in tqdm([7, 30, 60, 90, 180]):
+                    data[f"rolling_mean_dw_t{lag}_{w_size}"] = (
+                        data.groupby(["id", "tm_dw"])["sales"]
+                        .transform(lambda x: x.shift(lag).rolling(w_size).mean())
+                        .astype(np.float16)
+                    )
+                    data[f"rolling_mean_dw_store_t{lag}_{w_size}"] = (
+                        data.groupby(["store_id", "tm_dw"])["sales"]
+                        .transform(lambda x: x.shift(lag).rolling(w_size).mean())
+                        .astype(np.float16)
+                    )
+        df = data.filter(like="rolling_mean_dw")
         print(df.info())
         self.dump(df)
 

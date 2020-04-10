@@ -5,7 +5,9 @@ from kaggle_m5_forecasting import M5, MakeData
 from kaggle_m5_forecasting.data.fe_price_basic import FEPriceBasic
 from kaggle_m5_forecasting.data.fe_shift import FEShift
 from kaggle_m5_forecasting.data.fe_rolling import (
+    FERollingSum,
     FERollingMean,
+    FERollingMeanDW,
     FERollingStd,
     FERollingSkew,
     FERollingKurt,
@@ -24,7 +26,9 @@ class CombineFeatures(M5):
             data=MakeData(),
             fe_price_basic=FEPriceBasic(),
             fe_shift=FEShift(),
+            fe_rolling_sum=FERollingSum(),
             fe_rolling_mean=FERollingMean(),
+            fe_rolling_mean_dw=FERollingMeanDW(),
             fe_rolling_std=FERollingStd(),
             fe_rolling_kurt=FERollingKurt(),
             fe_rolling_skew=FERollingSkew(),
@@ -39,7 +43,9 @@ class CombineFeatures(M5):
                 self.load("data"),
                 self.load("fe_price_basic"),
                 self.load("fe_shift"),
+                self.load("fe_rolling_sum"),
                 self.load("fe_rolling_mean"),
+                self.load("fe_rolling_mean_dw"),
                 self.load("fe_rolling_std"),
                 self.load("fe_rolling_kurt"),
                 self.load("fe_rolling_skew"),

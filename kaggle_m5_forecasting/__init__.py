@@ -4,7 +4,9 @@ from kaggle_m5_forecasting.data.make_data import MakeData
 from kaggle_m5_forecasting.data.fe_price_basic import FEPriceBasic
 from kaggle_m5_forecasting.data.fe_shift import FEShift
 from kaggle_m5_forecasting.data.fe_rolling import (
+    FERollingSum,
     FERollingMean,
+    FERollingMeanDW,
     FERollingStd,
     FERollingSkew,
     FERollingKurt,
