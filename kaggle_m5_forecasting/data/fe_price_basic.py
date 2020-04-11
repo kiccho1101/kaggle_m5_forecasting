@@ -34,6 +34,18 @@ class FEPriceBasic(M5):
             prices_df["fe_price_mean"] = prices_df.groupby(["store_id", "item_id"])[
                 "sell_price"
             ].transform(np.mean)
+            prices_df["fe_price_discount"] = (
+                prices_df["fe_price_mean"] - prices_df["sell_price"]
+            )
+            prices_df["fe_price_discount_rate"] = (
+                prices_df["fe_price_discount"] / prices_df["fe_price_mean"]
+            )
+            prices_df["fe_price_skew"] = prices_df.groupby(["store_id", "item_id"])[
+                "sell_price"
+            ].transform(lambda x: x.skew())
+            prices_df["fe_price_kurt"] = prices_df.groupby(["store_id", "item_id"])[
+                "sell_price"
+            ].transform(lambda x: x.kurt())
             prices_df["fe_price_norm"] = (
                 prices_df["sell_price"] / prices_df["fe_price_max"]
             )
