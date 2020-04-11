@@ -67,6 +67,10 @@ class CombineFeatures(M5):
                 "event_type_1",
                 "event_name_2",
                 "event_type_2",
+                "event_name_1_yesterday",
+                "event_type_1_yesterday",
+                "event_name_1_tomorrow",
+                "event_type_1_tomorrow",
             ]
             for feature in tqdm(cat_features):
                 encoder = sklearn.preprocessing.LabelEncoder()

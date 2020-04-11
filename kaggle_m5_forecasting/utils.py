@@ -3,15 +3,18 @@ import numpy as np
 import time
 from typing import List
 from contextlib import contextmanager
+import mlflow
 
 
 @contextmanager
-def timer(name: str):
+def timer(name: str, mlflow_on: bool = False):
     t0 = time.time()
     print(f"[{name}] start")
     yield
     print(f"[{name}] done in {time.time() - t0:.4f} s")
     print()
+    if mlflow_on:
+        mlflow.log_param(name, f"{time.time() - t0:.4f}s")
 
 
 def reduce_mem_usage(df: pd.DataFrame, verbose=True) -> pd.DataFrame:

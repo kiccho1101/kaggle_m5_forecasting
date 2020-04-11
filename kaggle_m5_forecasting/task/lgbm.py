@@ -5,6 +5,8 @@ import numpy as np
 import datetime
 import glob
 import gc
+import mlflow
+import mlflow.lightgbm
 from tqdm.autonotebook import tqdm
 from typing import List
 import pickle
@@ -27,6 +29,13 @@ features: List[str] = [
     "event_type_1",
     "event_name_2",
     "event_type_2",
+    "event_name_1_yesterday",
+    "event_type_1_yesterday",
+    "event_name_1_tomorrow",
+    "event_type_1_tomorrow",
+    "cal_christmas_eve",
+    "cal_christmas",
+    "cal_blackfriday",
     "snap_CA",
     "snap_TX",
     "snap_WI",
@@ -45,6 +54,8 @@ features: List[str] = [
     # "fe_price_min",
     "fe_price_std",
     "fe_price_mean",
+    "fe_price_discount",
+    "fe_price_discount_rate",
     # "fe_price_norm",
     # "fe_price_nunique",
     # "fe_price_item_nunique",
@@ -95,6 +106,10 @@ cat_features: List[str] = [
         "event_type_1",
         "event_name_2",
         "event_type_2",
+        "event_name_1_yesterday",
+        "event_type_1_yesterday",
+        "event_name_1_tomorrow",
+        "event_type_1_tomorrow",
         "snap_CA",
         "snap_TX",
         "snap_WI",
@@ -181,61 +196,86 @@ class LGBMSubmission(M5):
         del train, val
         gc.collect()
 
-        with timer("train lgbm model"):
-            model = lgb.train(
-                params,
-                train_set,
-                num_boost_round=num_boost_round,
-                early_stopping_rounds=200,
-                valid_sets=[train_set, val_set],
-                verbose_eval=50,
-                categorical_feature=cat_features,
+        try:
+            mlflow.end_run()
+        except Exception:
+            pass
+
+        mlflow.lightgbm.autolog()
+        with mlflow.start_run():
+            with timer("train lgbm model", mlflow_on=True):
+                mlflow.log_param("MIN_SUM", MIN_SUM)
+                mlflow.log_param("MAX_LAGS", MAX_LAGS)
+                mlflow.log_param("features", str(features))
+
+                model = lgb.train(
+                    params,
+                    train_set,
+                    num_boost_round=num_boost_round,
+                    early_stopping_rounds=200,
+                    valid_sets=[train_set, val_set],
+                    verbose_eval=50,
+                    categorical_feature=cat_features,
+                )
+
+            with timer("predict test", mlflow_on=True):
+                test = data[(data.d > 1913 - MAX_LAGS)][["id", "d", "sales"]].copy()
+                alphas: List[float] = [1.035, 1.03, 1.025]
+                # alphas: List[float] = [1.0]
+                weights: List[float] = [1 / len(alphas)] * len(alphas)
+
+                mlflow.log_param("alphas", str(alphas))
+                mlflow.log_param("weights", str(weights))
+
+                for i, (alpha, weight) in tqdm(enumerate(zip(alphas, weights))):
+                    test_per_alpha = data[(data.d > 1913 - MAX_LAGS)].copy()
+                    print(
+                        test_per_alpha[test_per_alpha.d > 1913]["sales"].notnull().sum()
+                    )
+                    for tdelta in tqdm(range(0, 28)):
+                        test_per_alpha["shift_t7"] = (
+                            test_per_alpha[["id", "sales"]]
+                            .groupby("id")["sales"]
+                            .shift(7)
+                        )
+                        for w_size in [7, 30]:
+                            test_per_alpha[f"fe_rolling_mean_t7_{w_size}"] = (
+                                test_per_alpha[["id", "shift_t7"]]
+                                .groupby("id")["shift_t7"]
+                                .transform(lambda x: x.rolling(w_size).mean())
+                            )
+                        test_per_alpha.loc[
+                            test_per_alpha.d == 1914 + tdelta, "sales"
+                        ] = (
+                            alpha
+                            * model.predict(
+                                test_per_alpha.loc[
+                                    test_per_alpha.d == 1914 + tdelta, features
+                                ]
+                            )
+                        )
+                    if i == 0:
+                        test["sales"] = (
+                            weight * test_per_alpha[test_per_alpha.d > 1913]["sales"]
+                        )
+                    else:
+                        test["sales"] += (
+                            weight * test_per_alpha[test_per_alpha.d > 1913]["sales"]
+                        )
+
+            submission_file_prefix: str = "./output/submission/submission_{}_lgbm".format(
+                datetime.datetime.now().strftime("%Y-%m-%d")
             )
+            submission_no = len(glob.glob(submission_file_prefix + "_*.csv")) + 1
+            submission_file_name = "{}_{}.csv".format(
+                submission_file_prefix, submission_no
+            )
+            model_file_name = submission_file_name.replace(
+                "submission", "model"
+            ).replace(".csv", ".pkl")
+            mlflow.log_param("submission_file_name", submission_file_name)
+            mlflow.log_param("model_file_name", model_file_name)
 
-        with timer("predict test"):
-            test = data[(data.d > 1913 - MAX_LAGS)][["id", "d", "sales"]].copy()
-            # alphas: List[float] = [1.035, 1.03, 1.025]
-            alphas: List[float] = [1.0]
-            weights: List[float] = [1 / len(alphas)] * len(alphas)
-
-            for i, (alpha, weight) in tqdm(enumerate(zip(alphas, weights))):
-                test_per_alpha = data[(data.d > 1913 - MAX_LAGS)].copy()
-                print(test_per_alpha[test_per_alpha.d > 1913]["sales"].notnull().sum())
-                for tdelta in tqdm(range(0, 28)):
-                    test_per_alpha["shift_t7"] = (
-                        test_per_alpha[["id", "sales"]].groupby("id")["sales"].shift(7)
-                    )
-                    for w_size in [7, 30]:
-                        test_per_alpha[f"fe_rolling_mean_t7_{w_size}"] = (
-                            test_per_alpha[["id", "shift_t7"]]
-                            .groupby("id")["shift_t7"]
-                            .transform(lambda x: x.rolling(w_size).mean())
-                        )
-                    test_per_alpha.loc[test_per_alpha.d == 1914 + tdelta, "sales"] = (
-                        alpha
-                        * model.predict(
-                            test_per_alpha.loc[
-                                test_per_alpha.d == 1914 + tdelta, features
-                            ]
-                        )
-                    )
-                if i == 0:
-                    test["sales"] = (
-                        weight * test_per_alpha[test_per_alpha.d > 1913]["sales"]
-                    )
-                else:
-                    test["sales"] += (
-                        weight * test_per_alpha[test_per_alpha.d > 1913]["sales"]
-                    )
-
-        submission_file_prefix: str = "./output/submission/submission_{}_lgbm".format(
-            datetime.datetime.now().strftime("%Y-%m-%d")
-        )
-        submission_no = len(glob.glob(submission_file_prefix + "_*.csv")) + 1
-        submission_file_name = "{}_{}.csv".format(submission_file_prefix, submission_no)
-        model_file_name = submission_file_name.replace("submission", "model").replace(
-            ".csv", ".pkl"
-        )
         with timer("save model: {}".format(model_file_name)):
             with open(model_file_name, "wb") as f:
                 pickle.dump(model, f)
