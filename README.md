@@ -18,6 +18,10 @@ Solution for Kaggle M5 Forecasting Competition (https://www.kaggle.com/c/m5-fore
 
 2020-04-11 0.48833 (thanks to iterative prediction https://www.kaggle.com/kneroma/m5-first-public-notebook-under-0-50)
 
+## Ponchi
+
+![Alt text](appendix/ponchi.png?raw=true "Ponchi")
+
 ## Step1. Set up environments with pipenv
 
 ```bash
