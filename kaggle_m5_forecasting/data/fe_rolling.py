@@ -32,18 +32,13 @@ class FERollingMean(M5):
     def run(self):
         data: pd.DataFrame = self.load()
         with timer("make rolling mean"):
-            for lag in [7, 28]:
+            for lag in [7, 14, 28]:
                 for w_size in tqdm([7, 30, 60, 90, 180]):
                     data[f"fe_rolling_mean_t{lag}_{w_size}"] = (
                         data.groupby(["id"])["sales"]
                         .transform(lambda x: x.shift(lag).rolling(w_size).mean())
                         .astype(np.float16)
                     )
-                    # data[f"fe_rolling_mean_store_t{lag}_{w_size}"] = (
-                    #     data.groupby(["store_id"])["sales"]
-                    #     .transform(lambda x: x.shift(lag).rolling(w_size).mean())
-                    #     .astype(np.float16)
-                    # )
         df = data.filter(like="fe_rolling_mean")
         print(df.info())
         self.dump(df)
@@ -80,15 +75,10 @@ class FERollingStd(M5):
     def run(self):
         data: pd.DataFrame = self.load()
         with timer("make rolling features"):
-            for lag in [28]:
+            for lag in [7, 14, 28]:
                 for w_size in tqdm([7, 30, 60, 90, 180]):
                     data[f"fe_rolling_std_t{lag}_{w_size}"] = (
                         data.groupby(["id"])["sales"]
-                        .transform(lambda x: x.shift(lag).rolling(w_size).std())
-                        .astype(np.float16)
-                    )
-                    data[f"fe_rolling_std_item_t{lag}_{w_size}"] = (
-                        data.groupby(["item_id"])["sales"]
                         .transform(lambda x: x.shift(lag).rolling(w_size).std())
                         .astype(np.float16)
                     )

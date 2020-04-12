@@ -15,4 +15,4 @@ from kaggle_m5_forecasting.data.fe_price_change import FEPriceChange
 from kaggle_m5_forecasting.data.fe_price_rolling import FEPriceRolling
 from kaggle_m5_forecasting.data.fe_target import FETarget
 from kaggle_m5_forecasting.data.combine_features import CombineFeatures
-from kaggle_m5_forecasting.task.lgbm import LGBMVal, LGBMSubmission
+from kaggle_m5_forecasting.task.lgbm import LGBMSubmission

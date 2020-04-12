@@ -14,6 +14,7 @@ from kaggle_m5_forecasting.data.fe_rolling import (
 )
 from kaggle_m5_forecasting.data.fe_price_change import FEPriceChange
 from kaggle_m5_forecasting.data.fe_price_rolling import FEPriceRolling
+from kaggle_m5_forecasting.data.fe_revenue import FERevenue
 from kaggle_m5_forecasting.data.fe_target import FETarget
 import sklearn.preprocessing
 import pandas as pd
@@ -34,6 +35,7 @@ class CombineFeatures(M5):
             fe_rolling_skew=FERollingSkew(),
             fe_price_change=FEPriceChange(),
             fe_price_rolling=FEPriceRolling(),
+            fe_revenue=FERevenue(),
             fe_target=FETarget(),
         )
 
@@ -51,6 +53,7 @@ class CombineFeatures(M5):
                 self.load("fe_rolling_skew"),
                 self.load("fe_price_change"),
                 self.load("fe_price_rolling"),
+                self.load("fe_revenue"),
                 self.load("fe_target"),
             ],
             axis=1,
