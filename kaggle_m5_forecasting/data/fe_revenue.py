@@ -17,10 +17,11 @@ class FERevenue(M5):
 
     def run(self):
         data: pd.DataFrame = self.load()
-        data["fe_revenue"] = data["sales"] * data["sell_price"]
-        data["fe_revenue_dept_sum"] = data.groupby(["store_id", "dept_id", "d"])[
-            "fe_revenue"
-        ].transform(np.nansum)
+        for lag in [7]:
+            data[f"fe_revenue_t{lag}"] = (data["sales"] * data["sell_price"]).shift(lag)
+            data[f"fe_revenue_dept_sum_t{lag}"] = data.groupby(
+                ["store_id", "dept_id", "d"]
+            )[f"fe_revenue_t{lag}"].transform(np.nansum)
 
         df = data.filter(like="fe_revenue")
         df = reduce_mem_usage(df)

@@ -1,6 +1,8 @@
 import gc
 import pandas as pd
 import numpy as np
+from typing import List
+import sklearn.preprocessing
 from kaggle_m5_forecasting import M5, LoadRawData, RawData
 from kaggle_m5_forecasting.utils import (
     timer,
@@ -131,6 +133,12 @@ class MakeData(M5):
             data["date"] = pd.to_datetime(data["date"])
             print_mem_usage(data)
 
+        with timer("make snap"):
+            data["snap"] = 0
+            data.loc[(data.snap_CA == 1) & (data.state_id == "CA"), "snap"] = 1
+            data.loc[(data.snap_TX == 1) & (data.state_id == "TX"), "snap"] = 1
+            data.loc[(data.snap_WI == 1) & (data.state_id == "WI"), "snap"] = 1
+
         with timer("make some features from date"):
             data["tm_d"] = data["date"].dt.day.astype(np.int8)
             data["tm_w"] = data["date"].dt.week.astype(np.int8)
@@ -156,6 +164,25 @@ class MakeData(M5):
             data["d"] = data["d"].apply(lambda x: x[2:]).astype(np.int16)
             print_mem_usage(data)
 
+        with timer("label encoding"):
+            cat_features: List[str] = [
+                "item_id",
+                "dept_id",
+                "cat_id",
+                "store_id",
+                "state_id",
+                "event_name_1",
+                "event_type_1",
+                "event_name_2",
+                "event_type_2",
+                "event_name_1_yesterday",
+                "event_type_1_yesterday",
+                "event_name_1_tomorrow",
+                "event_type_1_tomorrow",
+            ]
+            for feature in tqdm(cat_features):
+                encoder = sklearn.preprocessing.LabelEncoder()
+                data[feature] = encoder.fit_transform(data[feature])
         print(data.info())
 
         self.dump(data)

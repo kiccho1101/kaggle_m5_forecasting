@@ -14,7 +14,7 @@ class FEShift(M5):
         data: pd.DataFrame = self.load()
         with timer("make shift features"):
             for days in tqdm(
-                list(range(7, 9))
+                list(range(1, 9))
                 + list(range(14, 16))
                 + list(range(28, 35))
                 + list(range(338, 340))

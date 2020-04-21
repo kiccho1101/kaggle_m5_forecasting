@@ -12,161 +12,133 @@ from typing import List
 import pickle
 import multiprocessing
 from joblib import Parallel, delayed
-from kaggle_m5_forecasting import M5, CombineFeatures, LoadRawData, RawData
-from kaggle_m5_forecasting.utils import timer, custom_objective
+from kaggle_m5_forecasting import (
+    M5,
+    LoadRawData,
+    RawData,
+    config,
+)
+from kaggle_m5_forecasting.base import Split
+from kaggle_m5_forecasting.data.combine_features import (
+    CombineValFeatures,
+    CombineFeatures,
+)
+from kaggle_m5_forecasting.utils import timer
+from kaggle_m5_forecasting.data.fe_rolling import make_rolling_for_test
+from kaggle_m5_forecasting.metric import WRMSSEEvaluator, calc_metrics
 
 
-START_DAY = 300
-num_boost_round = 1500
-MIN_SUM = 1
-MAX_LAGS = 57
+class LGBMVal(M5):
+    def requires(self):
+        return dict(sp=CombineValFeatures(), raw=LoadRawData())
 
-features: List[str] = [
-    "item_id",
-    "dept_id",
-    "cat_id",
-    "store_id",
-    "state_id",
-    "event_name_1",
-    "event_type_1",
-    "event_name_2",
-    "event_type_2",
-    "event_name_1_yesterday",
-    "event_type_1_yesterday",
-    "event_name_1_tomorrow",
-    "event_type_1_tomorrow",
-    # "cal_christmas_eve",
-    # "cal_christmas",
-    # "cal_blackfriday",
-    "snap_CA",
-    "snap_TX",
-    "snap_WI",
-    "tm_d",
-    "tm_w",
-    "tm_wday",
-    "tm_m",
-    "tm_y",
-    "tm_quarter",
-    "tm_wm",
-    "tm_wy",
-    "tm_dw",
-    # "tm_w_end",
-    "sell_price",
-    "fe_price_max",
-    # "fe_price_min",
-    "fe_price_std",
-    "fe_price_mean",
-    "fe_price_discount",
-    "fe_price_discount_rate",
-    # "fe_price_norm",
-    # "fe_price_nunique",
-    # "fe_price_item_nunique",
-    # "fe_price_momentum",
-    # "fe_price_momentum_m",
-    # "fe_price_momentum_y",
-    "shift_t7",
-    # "shift_t8",
-    "shift_t14",
-    # "shift_t15",
-    "shift_t28",
-    "shift_t29",
-    "shift_t30",
-    # "shift_t338",
-    "fe_rolling_mean_t7_7",
-    "fe_rolling_mean_t7_30",
-    "fe_rolling_mean_t14_7",
-    # "fe_rolling_mean_t14_30",
-    "fe_rolling_mean_t28_7",
-    "fe_rolling_mean_t28_30",
-    "fe_rolling_mean_t28_90",
-    "fe_rolling_mean_t28_180",
-    "fe_rolling_std_t7_7",
-    "fe_rolling_std_t7_30",
-    # "fe_rolling_std_t14_7",
-    # "fe_rolling_std_t14_30",
-    "fe_rolling_std_t28_7",
-    "fe_rolling_std_t28_30",
-    "fe_rolling_skew_t28_30",
-    "fe_rolling_kurt_t28_30",
-    # "fe_rolling_mean_dw_t28_30",
-    # "fe_rolling_mean_dw_store_t28_30",
-    # "fe_rolling_std_item_t28_7",
-    # "fe_rolling_mean_item_t28_7",
-    # "fe_rolling_mean_item_t28_30",
-    # "fe_rolling_std_item_t28_30",
-    "fe_price_change_t1",
-    "fe_price_change_t365",
-    "fe_rolling_price_std_t7",
-    "fe_rolling_price_std_t30",
-    # "fe_target_mean",
-    # "fe_target_std",
-    # "fe_target_max",
-]
+    def run(self):
+        sp: Split = self.load("sp")
+        raw: RawData = self.load("raw")
+        sp.train = sp.train[(sp.train.fe_rolling_sum_t0_30 >= config.MIN_SUM)]
+        print("train shape:", sp.train.shape)
+        train_set = lgb.Dataset(sp.train[config.features], sp.train["sales"])
+        val_set = lgb.Dataset(
+            sp.test[sp.test.d > 1885][config.features],
+            sp.test[sp.test.d > 1885]["sales"],
+        )
+        try:
+            mlflow.end_run()
+        except Exception:
+            pass
 
-cat_features: List[str] = [
-    f
-    for f in features
-    if f
-    in [
-        "item_id",
-        "dept_id",
-        "cat_id",
-        "store_id",
-        "state_id",
-        "event_name_1",
-        "event_type_1",
-        "event_name_2",
-        "event_type_2",
-        "event_name_1_yesterday",
-        "event_type_1_yesterday",
-        "event_name_1_tomorrow",
-        "event_type_1_tomorrow",
-        "snap_CA",
-        "snap_TX",
-        "snap_WI",
-    ]
-]
+        if mlflow.get_experiment_by_name("validation") is None:
+            mlflow.create_experiment("validation")
 
-params = {
-    "boosting_type": "gbdt",
-    "metric": "rmse",
-    "objective": "poisson",
-    # "objective": custom_objective,
-    "n_jobs": -1,
-    "seed": 42,
-    "num_leaves": 128,
-    "min_data_in_leaf": 50,
-    "learning_rate": 0.075,
-    "bagging_freq": 1,
-    "feature_fraction": 0.8,
-    "bagging_fraction": 0.75,
-}
+        with mlflow.start_run(
+            experiment_id=mlflow.get_experiment_by_name("validation").experiment_id,
+            run_name="",
+        ):
+            mlflow.lightgbm.autolog()
+            mlflow.log_param("MIN_SUM", config.MIN_SUM)
+            mlflow.log_param("MAX_LAGS", config.MAX_LAGS)
+            mlflow.log_param("start_day", config.START_DAY)
+            mlflow.log_param("SEED", config.SEED)
+            mlflow.log_param("features", str(config.features))
+
+            with timer("lgbm train", mlflow_on=True):
+                model = lgb.train(
+                    config.lgbm_params,
+                    train_set,
+                    num_boost_round=config.num_boost_round,
+                    verbose_eval=50,
+                    categorical_feature=config.lgbm_cat_features,
+                    early_stopping_rounds=20,
+                    valid_sets=[train_set, val_set],
+                )
+
+                # model = lgb.Booster(
+                #     model_file="./mlruns/1/11b33d7059494ca2b2f3ffd72df90a95/artifacts/model/model.lgb"
+                # )
+
+            with timer("lgbm predict", mlflow_on=True):
+                test_true = sp.test.copy()
+                test_pred = sp.test.copy()
+                for d in tqdm(range(1914 - 28, 1914)):
+                    print(d)
+                    test_pred = make_rolling_for_test(test_pred, d, config.features)
+                    print(
+                        (
+                            test_true.loc[(test_true.d == d), "fe_rolling_mean_t7_7"]
+                            - test_pred.loc[(test_pred.d == d), "fe_rolling_mean_t7_7"]
+                        ).mean()
+                    )
+                    print(
+                        (
+                            test_true.loc[(test_true.d == d), "shift_t7"]
+                            - test_pred.loc[(test_pred.d == d), "shift_t7"]
+                        ).mean()
+                    )
+                    print(
+                        (
+                            test_true.loc[(test_true.d == d), "fe_rolling_mean_t7_30"]
+                            - test_pred.loc[(test_pred.d == d), "fe_rolling_mean_t7_30"]
+                        ).mean()
+                    )
+                    test_pred.loc[test_pred.d == d, "sales"] = model.predict(
+                        test_pred.loc[test_pred.d == d, config.features]
+                    )
+
+            with timer("calc metrics", mlflow_on=True):
+                wrmsse, rmse, mae = calc_metrics(
+                    raw,
+                    test_pred[(test_pred.d > 1885) & (test_pred.d < 1914)],
+                    test_true[(test_true.d > 1885) & (test_true.d < 1914)],
+                )
+
+            print("=================================")
+            print("WRMSSE", wrmsse)
+            print("RMSE", rmse)
+            print("MAE", mae)
+            print("=================================")
+            mlflow.log_metric("WRMSSE", wrmsse)
+            mlflow.log_metric("RMSE", rmse)
+            mlflow.log_metric("MAE", mae)
+            self.dump(
+                {
+                    "test_pred": test_pred,
+                    "test_true": test_true,
+                    "model": model,
+                    "features": config.features,
+                }
+            )
 
 
 class LGBMSubmission(M5):
     def requires(self):
-        return dict(data=CombineFeatures(), raw=LoadRawData())
+        return dict(sp=CombineFeatures(), raw=LoadRawData())
 
     def run(self):
         raw: RawData = self.load("raw")
-        data: pd.DataFrame = self.load("data")[
-            features + ["id", "d", "fe_rolling_sum_t0_30", "sales"]
-        ]
-
-        np.random.seed(777)
-        with timer("split into train, val, test"):
-            train = data[
-                (data.d >= START_DAY)
-                & (data.d <= 1913)
-                & (data.fe_rolling_sum_t0_30 >= MIN_SUM)
-            ][features + ["sales"]]
-            val = train.sample(2_000_000).copy()
-            print("train shape:", train.shape)
-            print("val shape:", val.shape)
-
-        train_set = lgb.Dataset(train[features], train["sales"])
-        val_set = lgb.Dataset(val[features], val["sales"])
-        del train, val
+        sp: Split = self.load("sp")
+        sp.train = sp.train[(sp.train.fe_rolling_sum_t0_30 > config.MIN_SUM)]
+        train_set = lgb.Dataset(sp.train[config.features], sp.train["sales"])
+        sp.train = pd.DataFrame()
         gc.collect()
 
         try:
@@ -175,85 +147,34 @@ class LGBMSubmission(M5):
             pass
 
         mlflow.lightgbm.autolog()
-        with mlflow.start_run(run_name="MIN_SUM=1すごい！これはalphaの値によってもっと精度上がりそう...!"):
+        with mlflow.start_run(run_name=""):
             with timer("train lgbm model", mlflow_on=True):
-                mlflow.log_param("MIN_SUM", MIN_SUM)
-                mlflow.log_param("MAX_LAGS", MAX_LAGS)
-                mlflow.log_param("features", str(features))
+                mlflow.log_param("MIN_SUM", config.MIN_SUM)
+                mlflow.log_param("MAX_LAGS", config.MAX_LAGS)
+                mlflow.log_param("start_day", config.START_DAY)
+                mlflow.log_param("SEED", config.SEED)
+                mlflow.log_param("features", str(config.features))
 
                 # model = lgb.Booster(
-                #     model_file="./mlruns/0/b40cc5dcdbb0479191abb167ffaeb79b/artifacts/model/model.lgb"
+                #     model_file="./mlruns/0/ada288a146964aae9529808ee1a489a8/artifacts/model/model.lgb"
                 # )
 
                 model = lgb.train(
-                    params,
+                    config.lgbm_params,
                     train_set,
-                    num_boost_round=num_boost_round,
-                    early_stopping_rounds=200,
-                    valid_sets=[train_set, val_set],
+                    num_boost_round=config.num_boost_round,
                     verbose_eval=50,
-                    categorical_feature=cat_features,
+                    categorical_feature=config.lgbm_cat_features,
+                    valid_sets=[train_set],
                 )
 
             with timer("predict test", mlflow_on=True):
-                test = data[(data.d > 1913 - MAX_LAGS)][["id", "d", "sales"]].copy()
-                alphas: List[float] = [1.020, 1.015, 1.01]
-                # alphas: List[float] = [1.035, 1.03, 1.025]
-                # alphas: List[float] = [1.0]
-                weights: List[float] = [1 / len(alphas)] * len(alphas)
 
-                mlflow.log_param("alphas", str(alphas))
-                mlflow.log_param("weights", str(weights))
-
-                for i, (alpha, weight) in tqdm(enumerate(zip(alphas, weights))):
-                    test_per_alpha = data[(data.d > 1913 - MAX_LAGS)].copy()
-                    for tdelta in tqdm(range(0, 28)):
-
-                        for lag in [7, 8, 14, 15]:
-                            if f"shift_t{lag}" in features:
-                                test_per_alpha[f"shift_t{lag}"] = (
-                                    test_per_alpha[["id", "sales"]]
-                                    .groupby("id")["sales"]
-                                    .shift(lag)
-                                )
-
-                        for lag in [7, 8]:
-                            for w_size in [7, 30]:
-                                if f"fe_rolling_mean_t{lag}_{w_size}" in features:
-                                    test_per_alpha[
-                                        f"fe_rolling_mean_t{lag}_{w_size}"
-                                    ] = test_per_alpha.groupby("id")[
-                                        f"shift_t{lag}"
-                                    ].transform(
-                                        lambda x: x.rolling(w_size).mean()
-                                    )
-                                if f"fe_rolling_std_t{lag}_{w_size}" in features:
-                                    test_per_alpha[
-                                        f"fe_rolling_std_t{lag}_{w_size}"
-                                    ] = test_per_alpha.groupby("id")[
-                                        f"shift_t{lag}"
-                                    ].transform(
-                                        lambda x: x.rolling(w_size).std()
-                                    )
-
-                        test_per_alpha.loc[
-                            test_per_alpha.d == 1914 + tdelta, "sales"
-                        ] = (
-                            alpha
-                            * model.predict(
-                                test_per_alpha.loc[
-                                    test_per_alpha.d == 1914 + tdelta, features
-                                ]
-                            )
-                        )
-                    if i == 0:
-                        test["sales"] = (
-                            weight * test_per_alpha[test_per_alpha.d > 1913]["sales"]
-                        )
-                    else:
-                        test["sales"] += (
-                            weight * test_per_alpha[test_per_alpha.d > 1913]["sales"]
-                        )
+                for d in tqdm(range(1914, 1914 + 28)):
+                    sp.test = make_rolling_for_test(sp.test, d, config.features)
+                    sp.test.loc[sp.test.d == d, "sales"] = model.predict(
+                        sp.test.loc[sp.test.d == d, config.features]
+                    )
 
             with timer("create submission file"):
                 submission_file_prefix: str = "./output/submission/submission_{}_lgbm".format(
@@ -266,7 +187,7 @@ class LGBMSubmission(M5):
 
                 mlflow.log_param("submission_file_name", submission_file_name)
 
-                predictions = test[test.d > 1913][["id", "d", "sales"]]
+                predictions = sp.test[sp.test.d > 1913][["id", "d", "sales"]]
                 predictions = pd.pivot(
                     predictions, index="id", columns="d", values="sales"
                 ).reset_index()
@@ -281,8 +202,8 @@ class LGBMSubmission(M5):
                 validation = raw.sample_submission[["id"]].merge(predictions, on="id")
                 final = pd.concat([validation, evaluation])
 
-        # for i in range(1, 29):
-        #     final["F" + str(i)] *= 1.04
+        for i in range(1, 29):
+            final["F" + str(i)] *= 1.025
 
         final.to_csv(submission_file_name, index=False)
         self.dump(model)

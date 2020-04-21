@@ -1,9 +1,11 @@
 import pandas as pd
 import numpy as np
 import time
-from typing import List
+from typing import List, Any
 from contextlib import contextmanager
 import mlflow
+import psutil
+from multiprocessing import Pool
 
 
 @contextmanager
@@ -70,56 +72,10 @@ def merge_by_concat(
     return df
 
 
-def logcoshobjective(y_true, y_pred):
-    d = y_pred - y_true
-    grad = np.tanh(d) / y_true
-    hess = (1.0 - grad * grad) / y_true
-    return grad, hess
-
-
-def huberobjective(y_true, y_pred):
-    d = y_pred - y_true
-    h = 1.2  # h is delta in the formula
-    scale = 1 + (d / h) ** 2
-    scale_sqrt = np.sqrt(scale)
-    grad = d / scale_sqrt
-    hess = 1 / scale / scale_sqrt
-    return grad, hess
-
-
-def custom_objective(y_true, y_pred):
-    coef = [0.35, 0.5, 0.05, 0.1]
-
-    # fair
-    c = 0.5
-    residual = y_pred - y_true
-    grad = c * residual / (np.abs(residual) + c)
-    hess = c ** 2 / (np.abs(residual) + c) ** 2
-
-    # huber
-    h = 1.2  # h is delta in the formula
-    scale = 1 + (residual / h) ** 2
-    scale_sqrt = np.sqrt(scale)
-    grad_huber = residual / scale_sqrt
-    hess_huber = 1 / scale / scale_sqrt
-
-    # rmse grad and hess
-    grad_rmse = residual
-    hess_rmse = 1.0
-
-    # mae grad and hess
-    grad_mae = np.array(residual)
-    grad_mae[grad_mae > 0] = 1.0
-    grad_mae[grad_mae <= 0] = -1.0
-    hess_mae = 1.0
-
-    return (
-        coef[0] * grad
-        + coef[1] * grad_huber
-        + coef[2] * grad_rmse
-        + coef[3] * grad_mae,
-        coef[0] * hess
-        + coef[1] * hess_huber
-        + coef[2] * hess_rmse
-        + coef[3] * hess_mae,
-    )
+def df_parallelize_run(func, t_split: List[Any]):
+    num_cores = np.min([psutil.cpu_count(), len(t_split)])
+    pool = Pool(num_cores)
+    df = pd.concat(pool.map(func, t_split), axis=1)
+    pool.close()
+    pool.join()
+    return df

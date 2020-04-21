@@ -45,6 +45,7 @@ mlflow = "*"
 keras = "*"
 mlxtend = "*"
 pandasgui = "*"
+statsmodels = "*"
 
 [requires]
 python_version = "3.7"
