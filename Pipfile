@@ -46,6 +46,9 @@ keras = "*"
 mlxtend = "*"
 pandasgui = "*"
 statsmodels = "*"
+tensorflow = "*"
+catch22 = "*"
+fastprogress = "*"
 
 [requires]
 python_version = "3.7"

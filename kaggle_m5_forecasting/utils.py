@@ -6,6 +6,9 @@ from contextlib import contextmanager
 import mlflow
 import psutil
 from multiprocessing import Pool
+import random
+import os
+import torch
 
 
 @contextmanager
@@ -17,6 +20,15 @@ def timer(name: str, mlflow_on: bool = False):
     print()
     if mlflow_on:
         mlflow.log_param(name, f"{time.time() - t0:.4f}s")
+
+
+def seed_everything(seed):
+    random.seed(seed)
+    os.environ["PYTHONHASHSEED"] = str(seed)
+    np.random.seed(seed)
+    torch.manual_seed(seed)
+    torch.cuda.manual_seed(seed)
+    torch.backends.cudnn.deterministic = True
 
 
 def reduce_mem_usage(df: pd.DataFrame, verbose=True) -> pd.DataFrame:

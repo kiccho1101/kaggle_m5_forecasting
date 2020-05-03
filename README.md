@@ -20,6 +20,10 @@ Solution for Kaggle M5 Forecasting Competition (https://www.kaggle.com/c/m5-fore
 
 2020-04-12 0.48273
 
+2020-04-23 0.47101
+
+2020-04-24 0.46930
+
 ## Ponchi
 
 ![Alt text](appendix/ponchi.png?raw=true "Ponchi")

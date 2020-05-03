@@ -13,32 +13,39 @@ import gc
 
 
 def make_lag_roll(LAG_WSIZE: List[Any]):
-    data: pd.DataFrame = LAG_WSIZE[0]
+    df: pd.DataFrame = LAG_WSIZE[0]
     lag = LAG_WSIZE[1]
     w_size = LAG_WSIZE[2]
     method: str = LAG_WSIZE[3]
     col_name = f"fe_rolling_{method}_t{lag}_{w_size}"
 
+    group = df.groupby("id")
     with timer("create {}".format(col_name)):
         if method == "mean":
-            data[col_name] = (
-                data.groupby(["id"])["sales"]
+            df[col_name] = (
+                group["sales"]
                 .transform(lambda x: x.shift(lag).rolling(w_size).mean())
                 .astype(np.float16)
             )
         if method == "std":
-            data[col_name] = (
-                data.groupby(["id"])["sales"]
+            df[col_name] = (
+                group["sales"]
                 .transform(lambda x: x.shift(lag).rolling(w_size).std())
                 .astype(np.float16)
             )
         if method == "sum":
-            data[col_name] = (
-                data.groupby(["id"])["sales"]
+            df[col_name] = (
+                group["sales"]
                 .transform(lambda x: x.shift(lag).rolling(w_size).sum())
                 .astype(np.float16)
             )
-    return data[[col_name]]
+        if method == "zero_ratio":
+            df[col_name] = (
+                group["sales_is_zero"]
+                .transform(lambda x: x.shift(lag).rolling(w_size).mean())
+                .astype(np.float16)
+            )
+    return df[[col_name]]
 
 
 def make_rolling_for_test(
@@ -49,18 +56,31 @@ def make_rolling_for_test(
             test.loc[test.d == d, f"shift_t{lag}"] = test.loc[
                 test.d == (d - lag), "sales"
             ].values
-    for lag in [1, 7, 14]:
-        for w_size in [7, 14, 30, 60, 90, 180]:
-            for method in ["mean", "std"]:
+    for lag in [7]:
+        for w_size in [7, 30, 60, 90, 180]:
+            for method in ["mean", "std", "skew", "zero_ratio"]:
                 col_name = f"fe_rolling_{method}_t{lag}_{w_size}"
                 if col_name in features:
                     group = test[
                         (test.d >= d - lag - w_size) & (test.d <= d - lag)
                     ].groupby("id")
-                    test.loc[test.d == d, col_name] = (
-                        group.agg({"sales": method})
-                        .reindex(test.loc[test.d == d, "id"])["sales"]
-                        .values
+                    if method == "zero_ratio":
+                        test.loc[test.d == d, col_name] = (
+                            group.agg({"sales_is_zero": "mean"})
+                            .reindex(test.loc[test.d == d, "id"])["sales_is_zero"]
+                            .values
+                        )
+                    else:
+                        test.loc[test.d == d, col_name] = (
+                            group.agg({"sales": method})
+                            .reindex(test.loc[test.d == d, "id"])["sales"]
+                            .values
+                        )
+                diff_col_name = f"fe_rolling_{method}_diff_t{lag}_{w_size}"
+                if diff_col_name in features:
+                    test.loc[(test.d == d), diff_col_name] = (
+                        test.loc[(test.d == d), col_name].values
+                        - test.loc[(test.d == d - lag), "sales"].values
                     )
     return test
 
@@ -92,13 +112,58 @@ class FERollingMean(M5):
         data: pd.DataFrame = self.load()
         with timer("make rolling mean"):
             lag_wsize = []
-            for lag in [1, 7, 14, 28]:
-                for w_size in [7, 14, 30, 60, 90, 180]:
+            for lag in [7, 28]:
+                for w_size in [7, 30, 60, 90, 180]:
                     lag_wsize.append([data[["id", "d", "sales"]], lag, w_size, "mean"])
             data = pd.concat(
                 [data, df_parallelize_run(make_lag_roll, lag_wsize)], axis=1
             )
         df = data.filter(like="fe_rolling_mean")
+        print(df.info())
+        self.dump(df)
+
+
+class FERollingZeroRatio(M5):
+    def requires(self):
+        return MakeData()
+
+    def run(self):
+        data: pd.DataFrame = self.load()
+        with timer("make rolling zero_ratio"):
+            lag_wsize = []
+            for lag in [7, 28]:
+                for w_size in [7, 30, 60, 90, 180]:
+                    lag_wsize.append(
+                        [
+                            data[["id", "d", "sales", "sales_is_zero"]],
+                            lag,
+                            w_size,
+                            "zero_ratio",
+                        ]
+                    )
+            data = pd.concat(
+                [data, df_parallelize_run(make_lag_roll, lag_wsize)], axis=1
+            )
+        df = data.filter(like="fe_rolling_zero_ratio")
+        print(df.info())
+        self.dump(df)
+
+
+class FERollingMeanDiff(M5):
+    def requires(self):
+        return dict(data=MakeData(), roll=FERollingMean())
+
+    def run(self):
+        data: pd.DataFrame = self.load("data")
+        roll: pd.DataFrame = self.load("roll")
+
+        # %%
+        for col in roll.columns:
+            lag = int(col.split("_")[3].replace("t", ""))
+            data[col.replace("fe_rolling_mean", "fe_rolling_mean_diff")] = roll[
+                col
+            ] - data["sales"].shift(lag)
+        df = data.filter(like="fe_rolling_mean_diff")
         print(df.info())
         self.dump(df)
 
@@ -111,7 +176,7 @@ class FERollingStd(M5):
         data: pd.DataFrame = self.load()
         with timer("make rolling std"):
             lag_wsize = []
-            for lag in [1, 7, 14, 28]:
+            for lag in [7, 28]:
                 for w_size in [7, 30, 60, 90]:
                     lag_wsize.append([data[["id", "d", "sales"]], lag, w_size, "std"])
             data = pd.concat(

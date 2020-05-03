@@ -1,38 +1,10 @@
 from kaggle_m5_forecasting.data.load_data import RawData
-from typing import Union, Tuple
+from typing import Union, Tuple, List
 import sklearn.metrics
 
 import numpy as np
 import pandas as pd
 from tqdm.autonotebook import tqdm
-
-
-def calc_metrics(
-    raw: RawData, test_pred: pd.DataFrame, test_true: pd.DataFrame
-) -> Tuple[float, float, float]:
-    predictions = pd.pivot(
-        test_pred, index="id", columns="d", values="sales"
-    ).reset_index()
-    predictions.columns = ["id"] + [f"d_{i}" for i in range(1914 - 28, 1914)]
-
-    train_df = raw.sales_train_validation.iloc[:, :-28]
-    valid_df = raw.sales_train_validation.iloc[:, -28:]
-    valid_pred = (
-        raw.sales_train_validation.loc[:, ["id"]]
-        .merge(predictions, on=["id"], how="left")
-        .iloc[:, -28:]
-    )
-
-    evaluator = WRMSSEEvaluator(train_df, valid_df, raw.calendar, raw.sell_prices)
-    wrmsse = evaluator.score(valid_pred)
-    rmse = sklearn.metrics.mean_squared_error(
-        test_true["sales"].values, test_pred["sales"].values
-    )
-    mae = sklearn.metrics.mean_absolute_error(
-        test_true["sales"].values, test_pred["sales"].values
-    )
-
-    return wrmsse, rmse, mae
 
 
 class WRMSSEEvaluator(object):
@@ -153,3 +125,31 @@ class WRMSSEEvaluator(object):
             all_scores.append(lv_scores.sum())
 
         return np.mean(all_scores)
+
+
+def calc_metrics(
+    raw: RawData, test_pred: pd.DataFrame, test_true: pd.DataFrame
+) -> Tuple[float, float, float, WRMSSEEvaluator]:
+    predictions = pd.pivot(
+        test_pred, index="id", columns="d", values="sales"
+    ).reset_index()
+    predictions.columns = ["id"] + [f"d_{i}" for i in range(1914 - 28, 1914)]
+
+    train_df = raw.sales_train_validation.iloc[:, :-28]
+    valid_df = raw.sales_train_validation.iloc[:, -28:]
+    valid_pred = (
+        raw.sales_train_validation.loc[:, ["id"]]
+        .merge(predictions, on=["id"], how="left")
+        .iloc[:, -28:]
+    )
+
+    evaluator = WRMSSEEvaluator(train_df, valid_df, raw.calendar, raw.sell_prices)
+    wrmsse = evaluator.score(valid_pred)
+    rmse = sklearn.metrics.mean_squared_error(
+        test_true["sales"].values, test_pred["sales"].values
+    )
+    mae = sklearn.metrics.mean_absolute_error(
+        test_true["sales"].values, test_pred["sales"].values
+    )
+
+    return wrmsse, rmse, mae, evaluator
