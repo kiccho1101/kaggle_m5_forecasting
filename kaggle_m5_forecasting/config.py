@@ -1,12 +1,13 @@
 from typing import List
 
-SEED = 500
-MAX_LAGS = 57
+SEED = 402
+MAX_LAGS = 100
 START_DAY = 300
 num_boost_round = 2500
 MIN_SUM = 0
 CV_START_DAYS = [1886, 1858]
 CV_SAMPLE_RATE = 0.3
+DROP_NA = False
 
 
 lgbm_params = {
@@ -18,14 +19,15 @@ lgbm_params = {
     "n_jobs": -1,
     "seed": SEED,
     # "max_depth": 80,
-    "num_leaves": 127,
-    "min_data_in_leaf": 255,
+    "num_leaves": 157,
+    "min_data_in_leaf": 301,
     "learning_rate": 0.03,
     "bagging_freq": 1,
-    # "feature_fraction": 0.5,
-    # "bagging_fraction": 0.5,
-    "feature_fraction": 0.4,
-    "bagging_fraction": 0.45,
+    # "max_bin": 100,
+    "feature_fraction": 0.5,
+    "bagging_fraction": 0.5,
+    # "feature_fraction": 0.4,
+    # "bagging_fraction": 0.45,
 }
 
 
@@ -87,7 +89,6 @@ features = [
     "fe_te_store_id_item_id_std",
     "fe_te_store_id_item_id_tm_season_t5_mean",
     "fe_te_store_id_item_id_tm_season_t5_std",
-    "fe_rolling_zero_ratio_t28_60",
     "fe_te_store_id_cat_id_mean",
     "fe_te_store_id_cat_id_std",
     "fe_te_store_id_dept_id_mean",
@@ -111,11 +112,10 @@ features = [
     "snap_CA",
     "snap_TX",
     "snap_WI",
-    "event_name_1_yesterday",
-    "event_type_1_yesterday",
-    "event_name_1_tomorrow",
-    "event_type_1_tomorrow",
-    "snap",
+    # "event_name_1_yesterday",
+    # "event_type_1_yesterday",
+    # "event_name_1_tomorrow",
+    # "event_type_1_tomorrow",
     "tm_d",
     "tm_w",
     "tm_wday",
@@ -144,11 +144,9 @@ features = [
     "fe_rolling_mean_t7_7",
     "fe_rolling_mean_t7_30",
     "fe_rolling_mean_t7_60",
-    "fe_rolling_mean_t7_180",
     "fe_rolling_mean_t28_7",
     "fe_rolling_mean_t28_30",
     "fe_rolling_mean_t28_60",
-    "fe_rolling_zero_ratio_t28_60",
     "fe_rolling_mean_t28_90",
     "fe_rolling_mean_t28_180",
     "fe_rolling_std_t28_7",
@@ -163,10 +161,11 @@ features = [
     "fe_te_store_id_cat_id_std",
     "fe_te_store_id_dept_id_mean",
     "fe_te_store_id_dept_id_std",
-    # "fe_te_store_id_item_id_tm_dw_mean",
-    # "fe_te_store_id_item_id_tm_dw_std",
-    "fe_te_store_id_item_id_tm_season_t5_mean",
-    "fe_te_store_id_item_id_tm_season_t5_std",
+    "fe_te_store_id_item_id_tm_dw_mean",
+    "fe_te_store_id_item_id_tm_dw_std",
+    "fe_te_item_id_tm_dw_mean",
+    "fe_te_item_id_tm_dw_std",
+    "fe_cluster",
 ]
 
 

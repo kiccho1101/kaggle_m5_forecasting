@@ -62,22 +62,14 @@ class LGBMCrossValidation(M5):
                     with timer(f"CV: {cv_num}"):
 
                         with timer("prepare dataset"):
-
                             sp.train = sp.train[
                                 (sp.train.fe_rolling_sum_t0_30 >= config.MIN_SUM)
                                 & (sp.train.d > config.START_DAY)
                             ][config.features + ["sales"]]
                             print("train shape:", sp.train.shape)
-                            print(
-                                "number of NaN:",
-                                sp.train.isna()
-                                .sum(axis=0)
-                                .where(lambda x: x > 0)
-                                .dropna()
-                                .sort_values(),
-                            )
-                            # sp.train.dropna(inplace=True)
-                            # print("train shape:", sp.train.shape)
+                            if config.DROP_NA:
+                                sp.train.dropna(inplace=True)
+                                print("train shape:", sp.train.shape)
                             mlflow.log_param(f"train shape CV_{cv_num}", sp.train.shape)
                             train_set = lgb.Dataset(
                                 sp.train[config.features], sp.train["sales"]
@@ -105,6 +97,9 @@ class LGBMCrossValidation(M5):
                         with timer(f"lgbm predict CV_{cv_num}", mlflow_on=True):
                             test_true = sp.test.copy()
                             test_pred = sp.test.copy()
+                            test_pred.loc[
+                                test_pred.d >= config.CV_START_DAYS[cv_num], "sales"
+                            ] = np.nan
                             for d in tqdm(
                                 range(
                                     config.CV_START_DAYS[cv_num],
@@ -173,8 +168,9 @@ class LGBMSubmission(M5):
             "number of NaN:",
             sp.train.isna().sum(axis=0).where(lambda x: x > 0).dropna().sort_values(),
         )
-        # sp.train.dropna(inplace=True)
-        # print("train shape:", sp.train.shape)
+        if config.DROP_NA:
+            sp.train.dropna(inplace=True)
+            print("train shape:", sp.train.shape)
         train_set = lgb.Dataset(sp.train[config.features], sp.train["sales"])
         sp.train = pd.DataFrame()
         gc.collect()
@@ -192,9 +188,10 @@ class LGBMSubmission(M5):
                 mlflow.log_param("start_day", config.START_DAY)
                 mlflow.log_param("SEED", config.SEED)
                 mlflow.log_param("features", str(config.features))
+                mlflow.log_param("DROP_NA", config.DROP_NA)
 
                 # model = lgb.Booster(
-                #     model_file="./mlruns/0/ada288a146964aae9529808ee1a489a8/artifacts/model/model.lgb"
+                #     model_file="./mlruns/0/89f225d1fc624c69af3443e2982c8ddb/artifacts/model/model.lgb"
                 # )
 
                 model = lgb.train(
@@ -240,8 +237,18 @@ class LGBMSubmission(M5):
                 validation = raw.sample_submission[["id"]].merge(predictions, on="id")
                 final = pd.concat([validation, evaluation])
 
-        # for i in range(1, 29):
-        #     final["F" + str(i)] *= 1.025
-
+        final["F1"] *= 3215 / 3186
+        final["F2"] *= final["F2"].sum() / (final["F2"].sum() + 119)
+        final["F3"] *= 1913 / 1923
+        final["F4"] /= 1.0073
+        final["F5"] *= 0.995874
+        final["F6"] *= 1.000376
+        final["F7"] *= 0.995635
+        final["F8"] *= 0.9988
+        for i in range(9, 20):
+            if i != 11:
+                final["F" + str(i)] *= 1.01
+        for i in range(20, 29):
+            final["F" + str(i)] *= 1.02
         final.to_csv(submission_file_name, index=False)
         self.dump(model)

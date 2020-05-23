@@ -20,12 +20,12 @@ def target_encoding(train_df: pd.DataFrame) -> pd.DataFrame:
         ["store_id", "dept_id", "tm_dw"],
         ["store_id", "item_id"],
         ["store_id", "item_id", "tm_dw"],
-        ["store_id", "tm_season_t8"],
-        ["store_id", "item_id", "tm_season_t5"],
-        ["store_id", "tm_dw", "tm_season_t5"],
-        ["store_id", "item_id", "tm_dw", "tm_season_t5"],
-        ["store_id", "item_id", "tm_season_t8"],
-        ["store_id", "item_id", "tm_season_t10"],
+        # ["store_id", "tm_season_t8"],
+        # ["store_id", "item_id", "tm_season_t5"],
+        # ["store_id", "tm_dw", "tm_season_t5"],
+        # ["store_id", "item_id", "tm_dw", "tm_season_t5"],
+        # ["store_id", "item_id", "tm_season_t8"],
+        # ["store_id", "item_id", "tm_season_t10"],
     ]
     result: List[Tuple[List[str], pd.DataFrame]] = []
     methods = ["mean", "std", "skew"]
@@ -80,6 +80,7 @@ class TEData(M5):
     def run(self):
         data: pd.DataFrame = self.load()
         train_df: pd.DataFrame = data[(data.d > config.START_DAY) & (data.d <= 1913)]
+        # train_df = train_df.sample(int(len(train_df) * 0.15))
         with timer("create grouped df"):
             grouped: List[Tuple[List[str], pd.DataFrame]] = target_encoding(train_df)
         with timer("merge into data"):

@@ -32,6 +32,7 @@ Solution for Kaggle M5 Forecasting Competition (https://www.kaggle.com/c/m5-fore
 
 ```bash
 pipenv install --dev --skip-lock
+sh install_lightgbm_2.3.2.sh
 ```
 
 ## Step2. Download data
