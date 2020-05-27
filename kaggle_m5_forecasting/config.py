@@ -8,6 +8,8 @@ MIN_SUM = 0
 CV_START_DAYS = [1886, 1858]
 CV_SAMPLE_RATE = 0.3
 DROP_NA = False
+TARGET = "sales"
+CLS_THRESHOLD = 0.9
 
 
 lgbm_params = {
