@@ -17,7 +17,6 @@ logger = getLogger(__name__)
 class RawData:
     calendar: pd.DataFrame = pd.DataFrame()
     sales_train_validation: pd.DataFrame = pd.DataFrame()
-    sales_train_evaluation: pd.DataFrame = pd.DataFrame()
     sample_submission: pd.DataFrame = pd.DataFrame()
     sell_prices: pd.DataFrame = pd.DataFrame()
 
@@ -33,11 +32,6 @@ class LoadRawData(M5):
 
         with timer("load sales_train_validation.csv"):
             d.sales_train_validation = pd.read_csv(
-                "./m5-forecasting-accuracy/sales_train_validation.csv"
-            ).pipe(reduce_mem_usage)
-
-        with timer("load sales_train_evaluation.csv"):
-            d.sales_train_evaluation = pd.read_csv(
                 "./m5-forecasting-accuracy/sales_train_evaluation.csv"
             ).pipe(reduce_mem_usage)
 

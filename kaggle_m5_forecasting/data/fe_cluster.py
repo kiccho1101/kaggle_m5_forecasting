@@ -15,7 +15,7 @@ class FECluster(M5):
 
     def run(self):
         data: pd.DataFrame = self.load()
-        data = data[data.d < 1914]
+        data = data[data.d < 1942]
 
         with timer("calc grouped aggregates"):
             grouped = data.groupby(["id"])["sales"].agg(
