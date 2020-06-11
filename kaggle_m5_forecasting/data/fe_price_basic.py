@@ -6,10 +6,10 @@ from kaggle_m5_forecasting.data.make_data import MakeData
 from kaggle_m5_forecasting.utils import (
     timer,
     reduce_mem_usage,
-    print_mem_usage,
-    merge_by_concat,
 )
-from tqdm import tqdm
+import pickle
+from typing import Dict
+import sklearn.preprocessing
 
 
 class FEPriceBasic(M5):
@@ -86,15 +86,14 @@ class FEPriceBasic(M5):
             del prices_df["month"], prices_df["year"]
 
         with timer("merge prices_df"):
+            cat_encoders: Dict[str, sklearn.preprocessing.LabelEncoder] = pickle.load(
+                open("./cat_encoders.pkl", "rb")
+            )
+            for col in ["store_id", "item_id"]:
+                prices_df[col] = cat_encoders[col].transform(prices_df[col])
             data = data.merge(
                 prices_df, on=["store_id", "item_id", "wm_yr_wk"], how="left"
             )
-
-        with timer("make revenue feature"):
-            data["revenue"] = data["sales"] * data["sell_price"]
-            data["revenue_dept_sum"] = data.groupby(["store_id", "dept_id", "d"])[
-                "revenue"
-            ].transform(np.nansum)
 
         df = data.filter(like="fe_price")
         df = reduce_mem_usage(df)
