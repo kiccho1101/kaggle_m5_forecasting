@@ -1,18 +1,18 @@
-from typing import List
+from typing import List, Dict, Any
 
 SEED = 402
 MAX_LAGS = 100
 START_DAY = 300
 num_boost_round = 2500
 MIN_SUM = 0
-CV_START_DAYS = [1886, 1858]
-CV_SAMPLE_RATE = 0.3
+CV_START_DAYS = [1914, 1886, 1858]
+CV_SAMPLE_RATE = 0.1
 DROP_NA = False
 TARGET = "sales"
 CLS_THRESHOLD = 0.9
 
 
-lgbm_params = {
+lgbm_params: Dict[str, Any] = {
     "boosting_type": "gbdt",
     "metric": "rmse,mae,tweedie",
     "objective": "tweedie",
@@ -33,7 +33,7 @@ lgbm_params = {
 }
 
 
-features = [
+features: List[str] = [
     "item_id",
     "dept_id",
     "cat_id",
@@ -100,6 +100,7 @@ features = [
     "fe_te_store_id_tm_dw_tm_season_t5_mean",
     "fe_te_store_id_tm_dw_tm_season_t5_std",
 ]
+
 
 features = [
     "item_id",

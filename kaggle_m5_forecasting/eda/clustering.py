@@ -18,7 +18,7 @@ from kaggle_m5_forecasting.utils import timer
 
 tb = Thunderbolt("./../../resource")
 data: pd.DataFrame = tb.get_data("MakeData")
-data = data[data.d < 1914]
+data = data[data.d < 1942]
 
 # %%
 

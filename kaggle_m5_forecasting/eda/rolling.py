@@ -20,12 +20,7 @@ w_sizes = [30]
 alpha = 0.03
 for w_size in w_sizes:
     df[f"r_t{lag}_{w_size}"] = df["sales"].shift(lag).rolling(w_size).mean()
-    df[f"r_ewm{alpha}_t{lag}_{w_size}"] = df["sales"].shift(lag).ewm(alpha=alpha).mean()
-features = (
-    ["sales"]
-    + [f"r_t{lag}_{w_size}" for w_size in w_sizes]
-    + [f"r_ewm{alpha}_t{lag}_{w_size}" for w_size in w_sizes]
-)
+features = ["sales"] + [f"r_t{lag}_{w_size}" for w_size in w_sizes]
 df[features].tail(200).plot()
 plt.show()
 
@@ -49,4 +44,3 @@ test = data[(data.d > 1885) & (data.d < 1914)]
 
 
 # %%
-import lightgbm as lgb

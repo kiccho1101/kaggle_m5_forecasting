@@ -1,7 +1,7 @@
 import gc
 import pandas as pd
 import numpy as np
-from typing import List
+from typing import List, Dict
 import sklearn.preprocessing
 from kaggle_m5_forecasting import M5, LoadRawData, RawData
 from kaggle_m5_forecasting.utils import (
@@ -10,6 +10,7 @@ from kaggle_m5_forecasting.utils import (
     print_mem_usage,
     merge_by_concat,
 )
+import pickle
 from tqdm import tqdm
 
 
@@ -39,7 +40,7 @@ class MakeData(M5):
                 tmp_df["sales"] = np.nan
                 add_df = pd.concat([add_df, tmp_df])
             data = pd.concat([data, add_df]).reset_index(drop=True)
-            del tmp_df, add_df
+            del add_df
             print_mem_usage(data)
 
         with timer("str to category"):
@@ -170,6 +171,7 @@ class MakeData(M5):
             print_mem_usage(data)
 
         with timer("label encoding"):
+            cat_encoders: Dict[str, sklearn.preprocessing.LabelEncoder] = {}
             cat_features: List[str] = [
                 "item_id",
                 "dept_id",
@@ -187,7 +189,11 @@ class MakeData(M5):
             ]
             for feature in tqdm(cat_features):
                 encoder = sklearn.preprocessing.LabelEncoder()
-                data[feature] = encoder.fit_transform(data[feature])
+                encoder.fit(data[feature])
+                data[feature] = encoder.transform(data[feature])
+                cat_encoders[feature] = encoder
+            pickle.dump(cat_encoders, open("./cat_encoders.pkl", "wb"))
+
         print(data.info())
 
         self.dump(data)
