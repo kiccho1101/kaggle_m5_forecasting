@@ -4,7 +4,8 @@ import mlflow.lightgbm
 import pandas as pd
 import numpy as np
 from kaggle_m5_forecasting.base import Split
-from kaggle_m5_forecasting import RawData, config
+from kaggle_m5_forecasting.config import Config
+from kaggle_m5_forecasting import RawData
 from kaggle_m5_forecasting.utils import timer
 from kaggle_m5_forecasting.data.fe_rolling import make_rolling_for_test
 from kaggle_m5_forecasting.metric import calc_metrics
@@ -25,6 +26,7 @@ def start_mlflow() -> int:
 
 
 def delete_unused_features(splits: List[Split]) -> List[Split]:
+    config = Config()
     for i in range(len(splits)):
         splits[i].train = splits[i].train[config.features + [config.TARGET]]
         print(f"CV{i} train shape:", splits[i].train.shape)
@@ -35,6 +37,7 @@ def delete_unused_features(splits: List[Split]) -> List[Split]:
 
 
 def log_params():
+    config = Config()
     mlflow.lightgbm.autolog()
     mlflow.log_param("MIN_SUM", config.MIN_SUM)
     mlflow.log_param("MAX_LAGS", config.MAX_LAGS)
@@ -44,6 +47,7 @@ def log_params():
 
 
 def convert_to_lgb_dataset(sp: Split, cv_num: int) -> Tuple[lgb.Dataset, lgb.Dataset]:
+    config = Config()
     train_set = lgb.Dataset(sp.train[config.features], sp.train[config.TARGET])
     val_set = lgb.Dataset(
         sp.test[sp.test.d > config.CV_START_DAYS[cv_num]][config.features],
@@ -59,6 +63,7 @@ def train(
     verbose_eval: int,
     early_stopping_rounds: Optional[int] = None,
 ) -> lgb.Booster:
+    config = Config()
     with timer(f"train CV_{cv_num}", mlflow_on=True):
         model = lgb.train(
             config.lgbm_params,
@@ -72,6 +77,7 @@ def train(
 
 
 def predict(cv_num: int, sp: Split, model: lgb.Booster) -> pd.DataFrame:
+    config = Config()
     d_start: int = config.CV_START_DAYS[cv_num]
     d_end: int = config.CV_START_DAYS[cv_num] + 28
     test_pred = sp.test.copy()
@@ -92,6 +98,7 @@ def predict(cv_num: int, sp: Split, model: lgb.Booster) -> pd.DataFrame:
 
 
 def log_result(cv_num: int, start_time: str, test_pred: pd.DataFrame):
+    config = Config()
     d_start = config.CV_START_DAYS[cv_num]
     d_end = config.CV_START_DAYS[cv_num] + 28
     save_cols: List[str] = [
@@ -109,6 +116,9 @@ def log_result(cv_num: int, start_time: str, test_pred: pd.DataFrame):
         test_pred.loc[(test_pred.d >= d_start) & (test_pred.d < d_end), save_cols],
         open(f"./output/cv/{start_time}/{cv_num}/test_pred.pkl", "wb"),
     )
+    pickle.dump(
+        config, open(f"./output/cv/{start_time}/{cv_num}/config.pkl", "wb"),
+    )
     test_pred
 
 
@@ -119,6 +129,7 @@ def log_metrics(
     test_pred: pd.DataFrame,
     test_true: pd.DataFrame,
 ) -> Tuple[float, float, float]:
+    config = Config()
     d_start = config.CV_START_DAYS[cv_num]
     d_end = config.CV_START_DAYS[cv_num] + 28
     wrmsse, rmse, mae, _ = calc_metrics(
