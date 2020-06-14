@@ -5,11 +5,10 @@ import pandas as pd
 import numpy as np
 import scipy
 import catch22
-import sklearn.cluster
 import sklearn.preprocessing
 
 
-class FECluster(M5):
+class FECatch22(M5):
     def requires(self):
         return MakeData()
 
@@ -18,7 +17,7 @@ class FECluster(M5):
         data = data[data.d < 1942]
 
         with timer("calc grouped aggregates"):
-            grouped = data.groupby(["id"])["sales"].agg(
+            catch22_df = data.groupby(["id"])["sales"].agg(
                 {
                     "mean": lambda x: x.dropna().values.mean(),
                     "percentile25": lambda x: x.dropna()
@@ -100,84 +99,36 @@ class FECluster(M5):
                     ),
                 }
             )
-        grouped["zero_ratio"] = data.groupby("id")["sales_is_zero"].mean()
-        grouped["std"] = data.groupby("id")["sales"].agg({"std": "std"})["std"]
-        grouped["zero_ratio"] = data.groupby("id")["sales_is_zero"].mean()
-        grouped["std"] = data.groupby("id")["sales"].agg({"std": "std"})["std"]
-        grouped["sell_price_mean"] = data.groupby("id")["sell_price"].mean()
-        grouped = pd.concat(
-            [
-                grouped,
-                pd.get_dummies(
-                    grouped.reset_index("id")["id"].map(
-                        lambda x: "_".join(x.split("_")[:1])
-                    ),
-                    prefix="genre",
-                ).set_index(grouped.index),
-            ],
-            axis=1,
-        )
-        grouped = pd.concat(
-            [
-                grouped,
-                pd.get_dummies(
-                    grouped.reset_index("id")["id"].map(
-                        lambda x: "_".join(x.split("_")[:2])
-                    ),
-                    prefix="genre",
-                ).set_index(grouped.index),
-            ],
-            axis=1,
-        )
 
-        scaled = sklearn.preprocessing.StandardScaler().fit_transform(
-            grouped[
-                [
-                    "mean",
-                    "percentile25",
-                    "percentile50",
-                    "std",
-                    "CO_Embed2_Dist_tau_d_expfit_meandiff",
-                    "CO_f1ecac",
-                    "CO_FirstMin_ac",
-                    "CO_HistogramAMI_even_2_5",
-                    "CO_trev_1_num",
-                    "DN_HistogramMode_10",
-                    "DN_HistogramMode_5",
-                    "DN_OutlierInclude_n_001_mdrmd",
-                    "DN_OutlierInclude_p_001_mdrmd",
-                    "FC_LocalSimple_mean1_tauresrat",
-                    "FC_LocalSimple_mean3_stderr",
-                    "IN_AutoMutualInfoStats_40_gaussian_fmmi",
-                    "MD_hrv_classic_pnn40",
-                    "PD_PeriodicityWang_th0_01",
-                    "SB_BinaryStats_diff_longstretch0",
-                    "SB_BinaryStats_mean_longstretch1",
-                    "SB_MotifThree_quantile_hh",
-                    "SB_TransitionMatrix_3ac_sumdiagcov",
-                    "SC_FluctAnal_2_dfa_50_1_2_logi_prop_r1",
-                    "SC_FluctAnal_2_rsrangefit_50_1_logi_prop_r1",
-                    "SP_Summaries_welch_rect_area_5_1",
-                    "SP_Summaries_welch_rect_centroid",
-                    "zero_ratio",
-                    "sell_price_mean",
-                    # "genre_FOODS",
-                    # "genre_HOBBIES",
-                    # "genre_HOUSEHOLD",
-                    "genre_FOODS_1",
-                    "genre_FOODS_2",
-                    "genre_FOODS_3",
-                    "genre_HOBBIES_1",
-                    "genre_HOBBIES_2",
-                    "genre_HOUSEHOLD_1",
-                    "genre_HOUSEHOLD_2",
-                ]
-            ].values
-        )
-        grouped["fe_cluster"] = sklearn.cluster.KMeans(n_clusters=3).fit(scaled).labels_
-        grouped["fe_cluster"].value_counts()
-        with timer("merge into data"):
-            data = data.merge(grouped.reset_index(), on="id", how="left")
-        df = data.filter(like="fe_cluster")
-        print(df.info())
-        self.dump(df)
+        print(catch22_df.info())
+        self.dump(catch22_df)
+
+        # grouped["zero_ratio"] = data.groupby("id")["sales_is_zero"].mean()
+        # grouped["std"] = data.groupby("id")["sales"].agg({"std": "std"})["std"]
+        # grouped["zero_ratio"] = data.groupby("id")["sales_is_zero"].mean()
+        # grouped["std"] = data.groupby("id")["sales"].agg({"std": "std"})["std"]
+        # grouped["sell_price_mean"] = data.groupby("id")["sell_price"].mean()
+        # grouped = pd.concat(
+        #     [
+        #         grouped,
+        #         pd.get_dummies(
+        #             grouped.reset_index("id")["id"].map(
+        #                 lambda x: "_".join(x.split("_")[:1])
+        #             ),
+        #             prefix="genre",
+        #         ).set_index(grouped.index),
+        #     ],
+        #     axis=1,
+        # )
+        # grouped = pd.concat(
+        #     [
+        #         grouped,
+        #         pd.get_dummies(
+        #             grouped.reset_index("id")["id"].map(
+        #                 lambda x: "_".join(x.split("_")[:2])
+        #             ),
+        #             prefix="genre",
+        #         ).set_index(grouped.index),
+        #     ],
+        #     axis=1,
+        # )
