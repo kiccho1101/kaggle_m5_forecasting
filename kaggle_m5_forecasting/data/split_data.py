@@ -1,7 +1,8 @@
 import pandas as pd
 import numpy as np
 import random
-from kaggle_m5_forecasting import M5, config, MakeData
+from kaggle_m5_forecasting import M5, MakeData
+from kaggle_m5_forecasting.config import Config
 from kaggle_m5_forecasting.base import SplitIndex
 from typing import List
 
@@ -15,6 +16,7 @@ class SplitValData(M5):
     def run(self):
         data: pd.DataFrame = self.load()
         sp_idxs: List[SplitIndex] = []
+        config = Config()
         np.random.seed(config.SEED)
         random.seed(config.SEED)
 
@@ -45,6 +47,7 @@ class SplitData(M5):
 
         sp_idx: SplitIndex = SplitIndex()
 
+        config = Config()
         sp_idx.train = list(data[(data.d >= config.START_DAY) & (data.d <= 1913)].index)
         sp_idx.test = list(data[(data.d > 1913 - config.MAX_LAGS)].index)
 

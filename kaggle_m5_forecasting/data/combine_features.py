@@ -15,11 +15,10 @@ from kaggle_m5_forecasting.data.fe_rolling import (
     FERollingSkew,
 )
 from kaggle_m5_forecasting.data.fe_revenue import FERevenue
-from kaggle_m5_forecasting.data.fe_cluster import FECluster
 from kaggle_m5_forecasting.data.target_encoding import TEValData, TEData
 from kaggle_m5_forecasting.data.split_data import SplitValData, SplitData
 from kaggle_m5_forecasting.utils import timer
-from kaggle_m5_forecasting import config
+from kaggle_m5_forecasting.config import Config
 
 from typing import List, Tuple
 from tqdm.autonotebook import tqdm
@@ -43,7 +42,6 @@ class CombineValFeatures(M5):
             fe_rolling_skew=FERollingSkew(),
             fe_rolling_kurt=FERollingKurt(),
             fe_revenue=FERevenue(),
-            fe_cluster=FECluster(),
             te_val_data=TEValData(),
         )
 
@@ -65,11 +63,11 @@ class CombineValFeatures(M5):
                         self.load("fe_rolling_skew"),
                         self.load("fe_rolling_kurt"),
                         self.load("fe_revenue"),
-                        self.load("fe_cluster"),
                     ],
                     axis=1,
                 )
             with timer("merge target features"):
+                config = Config()
                 te_val_data: List[pd.DataFrame] = self.load("te_val_data")
                 splits: List[Split] = []
                 sp_idxs: List[SplitIndex] = self.load("sp_idxs")
@@ -105,7 +103,6 @@ class CombineFeatures(M5):
             fe_rolling_skew=FERollingSkew(),
             fe_rolling_kurt=FERollingKurt(),
             fe_revenue=FERevenue(),
-            fe_cluster=FECluster(),
             te_data=TEData(),
         )
 
@@ -127,7 +124,6 @@ class CombineFeatures(M5):
                         self.load("fe_rolling_skew"),
                         self.load("fe_rolling_kurt"),
                         self.load("fe_revenue"),
-                        self.load("fe_cluster"),
                         self.load("te_data"),
                     ],
                     axis=1,

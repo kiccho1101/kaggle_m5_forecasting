@@ -36,7 +36,7 @@ class MakeData(M5):
             add_df = pd.DataFrame()
             for i in tqdm(range(1, 29)):
                 tmp_df = raw.sales_train_validation[id_vars].drop_duplicates()
-                tmp_df["d"] = f"d_{1913+i}"
+                tmp_df["d"] = f"d_{1941+i}"
                 tmp_df["sales"] = np.nan
                 add_df = pd.concat([add_df, tmp_df])
             data = pd.concat([data, add_df]).reset_index(drop=True)

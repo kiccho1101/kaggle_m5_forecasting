@@ -1,6 +1,6 @@
 from kaggle_m5_forecasting.base import M5
 from kaggle_m5_forecasting.data.make_data import MakeData
-from kaggle_m5_forecasting import config
+from kaggle_m5_forecasting.config import Config
 from kaggle_m5_forecasting.utils import timer
 import pandas as pd
 import catch22
@@ -94,6 +94,7 @@ class TECatch22ValData(M5):
         return dict(data=MakeData())
 
     def run(self):
+        config = Config()
         data: pd.DataFrame = self.load("data")
         results: List[List[Tuple[List[str], pd.DataFrame]]] = []
         for end_day in config.CV_START_DAYS:
@@ -109,6 +110,7 @@ class TECatch22Data(M5):
         return MakeData()
 
     def run(self):
+        config = Config()
         data: pd.DataFrame = self.load()
         train_df: pd.DataFrame = data[(data.d > config.START_DAY) & (data.d <= 1913)]
         result: List[Tuple[List[str], pd.DataFrame]] = target_encoding_catch22(train_df)

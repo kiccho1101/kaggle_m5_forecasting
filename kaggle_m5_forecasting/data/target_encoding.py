@@ -8,7 +8,7 @@ from typing import List, Tuple
 import pandas as pd
 import numpy as np
 from tqdm.autonotebook import tqdm
-from kaggle_m5_forecasting import config
+from kaggle_m5_forecasting.config import Config
 
 
 def target_encoding(train_df: pd.DataFrame) -> pd.DataFrame:
@@ -53,6 +53,7 @@ class TEValData(M5):
         return dict(data=MakeData())
 
     def run(self):
+        config = Config()
         data: pd.DataFrame = self.load("data")
         dfs: List[pd.DataFrame] = []
         for end_day in config.CV_START_DAYS:
@@ -78,6 +79,7 @@ class TEData(M5):
         return MakeData()
 
     def run(self):
+        config = Config()
         data: pd.DataFrame = self.load()
         train_df: pd.DataFrame = data[(data.d > config.START_DAY) & (data.d <= 1913)]
         # train_df = train_df.sample(int(len(train_df) * 0.15))
