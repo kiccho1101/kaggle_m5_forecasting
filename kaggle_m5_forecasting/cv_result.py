@@ -6,24 +6,27 @@ import glob
 from kaggle_m5_forecasting.config import Config
 from kaggle_m5_forecasting.data.load_data import RawData
 from kaggle_m5_forecasting.wrmsse import WRMSSEEvaluator
+import sklearn.preprocessing
+from typing import Dict
 
 
 @dataclass
 class CVResult:
     cv_num: int
     test_pred: pd.DataFrame
-    evaluator: Optional[WRMSSEEvaluator] = None
     config: Optional[Config] = None
 
     @staticmethod
-    def _create_train_df(raw: RawData, cv_start_d: int, cv_end_d: int) -> pd.DataFrame:
+    def _create_train_df(
+        raw: RawData, train_start_d: int, train_end_d: int
+    ) -> pd.DataFrame:
         train_max_d = int(
             raw.sales_train_validation.filter(like="d_")
             .iloc[:, -1]
             .name.replace("d_", "")
         )
-        train_drop_cols = [f"d_{d}" for d in range(1, cv_start_d)]
-        train_drop_cols += [f"d_{d}" for d in range(cv_end_d + 1, train_max_d + 1)]
+        train_drop_cols = [f"d_{d}" for d in range(1, train_start_d)]
+        train_drop_cols += [f"d_{d}" for d in range(train_end_d + 1, train_max_d + 1)]
         train_df: pd.DataFrame = raw.sales_train_validation.drop(
             train_drop_cols, axis=1
         )
@@ -33,26 +36,31 @@ class CVResult:
         return train_df
 
     @staticmethod
-    def _create_valid_df(test_pred: pd.DataFrame) -> pd.DataFrame:
-        valid_df: pd.DataFrame = pd.pivot(
-            test_pred, index="id", columns="d", values="sales"
-        )
-        valid_df.columns = [f"d_{d}" for d in valid_df.columns]
+    def _create_valid_df(
+        raw: RawData, test_start_d: int, test_end_d: int
+    ) -> pd.DataFrame:
+        valid_df: pd.DataFrame = raw.sales_train_validation[
+            [f"d_{d}" for d in range(test_start_d, test_end_d + 1)]
+        ]
         valid_df.reset_index(drop=True, inplace=True)
         assert valid_df.shape == (30490, 28)
         return valid_df
 
     @staticmethod
     def _create_calendar_df(
-        raw: RawData, cv_start_d: int, cv_end_d: int
+        raw: RawData, train_start_d: int, train_end_d: int
     ) -> pd.DataFrame:
-        calendar_df: pd.DataFrame = raw.calendar.iloc[cv_start_d - 1 : cv_end_d, :]
+        calendar_df: pd.DataFrame = raw.calendar.iloc[
+            train_start_d - 1 : train_end_d, :
+        ]
         return calendar_df
 
     @staticmethod
-    def _create_prices_df(raw: RawData, cv_start_d: int, cv_end_d: int) -> pd.DataFrame:
-        prices_start = raw.calendar["wm_yr_wk"][cv_start_d - 1]
-        prices_end = raw.calendar["wm_yr_wk"][cv_end_d - 1]
+    def _create_prices_df(
+        raw: RawData, train_start_d: int, train_end_d: int
+    ) -> pd.DataFrame:
+        prices_start = raw.calendar["wm_yr_wk"][train_start_d - 1]
+        prices_end = raw.calendar["wm_yr_wk"][train_end_d - 1]
         prices_df: pd.DataFrame = raw.sell_prices.loc[
             (raw.sell_prices.wm_yr_wk >= prices_start)
             & (raw.sell_prices.wm_yr_wk <= prices_end),
@@ -60,15 +68,41 @@ class CVResult:
         ]
         return prices_df
 
-    def wrmsse(self, raw: RawData):
-        cv_start_d = self.config.START_DAY
-        cv_end_d = int(self.test_pred["d"].min()) - 1
+    def _get_valid_pred_df(self, raw: RawData) -> pd.DataFrame:
+        cat_encoders: Dict[str, sklearn.preprocessing.LabelEncoder] = pickle.load(
+            open("./cat_encoders.pkl", "rb")
+        )
+        valid_pred_df: pd.DataFrame = self.test_pred[["item_id", "store_id", "d", "sales"]]
+        valid_pred_df["item_id"] = valid_pred_df["item_id"].apply(
+            lambda x: cat_encoders["item_id"].classes_[x]
+        )
+        valid_pred_df["store_id"] = self.test_pred["store_id"].apply(
+            lambda x: cat_encoders["store_id"].classes_[x]
+        )
+        valid_pred_df = valid_pred_df.set_index(["item_id", "store_id", "d"]).unstack()
+        valid_pred_df.columns = valid_pred_df.columns.droplevel()
+        valid_pred_df = valid_pred_df.loc[
+            zip(
+                raw.sales_train_validation.item_id, raw.sales_train_validation.store_id
+            ),
+            :,
+        ]
+        return valid_pred_df
 
-        train_df = self._create_train_df(raw, cv_start_d, cv_end_d)
-        valid_df = self._create_valid_df(self.test_pred)
-        calendar_df = self._create_calendar_df(raw, cv_start_d, cv_end_d)
-        prices_df = self._create_prices_df(raw, cv_start_d, cv_end_d)
-        self.evaluator = WRMSSEEvaluator(train_df, valid_df, calendar_df, prices_df)
+    def get_evaluator(self, raw: RawData) -> WRMSSEEvaluator:
+        train_start_d = self.config.START_DAY
+        train_end_d = int(self.test_pred["d"].min()) - 1
+        test_start_d = self.test_pred["d"].min()
+        test_end_d = self.test_pred["d"].max()
+
+        train_df = self._create_train_df(raw, train_start_d, train_end_d)
+        valid_df = self._create_valid_df(raw, test_start_d, test_end_d)
+        calendar_df = self._create_calendar_df(raw, train_start_d, train_end_d)
+        prices_df = self._create_prices_df(raw, train_start_d, train_end_d)
+        evaluator = WRMSSEEvaluator(train_df, valid_df, calendar_df, prices_df)
+        valid_pred_df = self._get_valid_pred_df(raw)
+        evaluator.score(valid_pred_df.values)
+        return evaluator
 
 
 class CVResults:

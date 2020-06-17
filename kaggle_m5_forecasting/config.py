@@ -10,7 +10,7 @@ class Config:
     num_boost_round = 2500
     MIN_SUM = 0
     CV_START_DAYS = [1914, 1886, 1858]
-    CV_SAMPLE_RATE = 0.1
+    CV_SAMPLE_RATE = 0.3
     DROP_NA = False
     TARGET = "sales"
     CLS_THRESHOLD = 0.9
@@ -169,7 +169,6 @@ class Config:
         "fe_te_store_id_item_id_tm_dw_std",
         "fe_te_item_id_tm_dw_mean",
         "fe_te_item_id_tm_dw_std",
-        "fe_cluster",
     ]
 
     lgbm_cat_features: List[str] = [
@@ -182,7 +181,6 @@ class Config:
             "cat_id",
             "store_id",
             "state_id",
-            "fe_cluster",
             "event_name_1",
             "event_type_1",
             "event_name_2",

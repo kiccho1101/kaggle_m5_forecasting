@@ -37,6 +37,8 @@ class WRMSSEEvaluator(object):
         self.id_columns = id_columns
         self.valid_target_columns = valid_target_columns
 
+        self.all_scores = []
+
         weight_df = self.get_weight_df()
 
         self.group_ids = (

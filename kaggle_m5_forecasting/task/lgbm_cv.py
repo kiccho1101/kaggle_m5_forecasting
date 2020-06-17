@@ -7,6 +7,7 @@ import mlflow.lightgbm
 
 from kaggle_m5_forecasting.base import Split
 from kaggle_m5_forecasting import M5, CombineValFeatures, LoadRawData
+from kaggle_m5_forecasting.data.load_data import RawData
 
 from kaggle_m5_forecasting.task.lgbm import (
     start_mlflow,
@@ -27,7 +28,7 @@ class LGBMCrossValidation(M5):
 
     def run(self):
         splits: List[Split] = self.load("splits")
-        # raw: RawData = self.load("raw")
+        raw: RawData = self.load("raw")
 
         splits = delete_unused_features(splits)
 
@@ -40,7 +41,7 @@ class LGBMCrossValidation(M5):
 
         log_params()
 
-        # wrmsses, rmses, maes = [], [], []
+        wrmsses, rmses, maes = [], [], []
         for cv_num, sp in enumerate(splits):
             Path(f"./output/cv/{start_time}/{cv_num}").mkdir(
                 parents=True, exist_ok=True
@@ -51,9 +52,10 @@ class LGBMCrossValidation(M5):
             test_pred = predict(cv_num, sp, model)
 
             log_result(cv_num, start_time, test_pred)
-        #     wrmsse, rmse, mae = log_metrics(cv_num, start_time, raw, test_pred, sp.test)
-        #     wrmsses.append(wrmsse)
-        #     rmses.append(rmse)
-        #     maes.append(mae)
-        # log_avg_metrics(wrmsses, rmses, maes)
+            wrmsse, rmse, mae = log_metrics(cv_num, start_time, raw, test_pred, sp.test)
+            wrmsses.append(wrmsse)
+            rmses.append(rmse)
+            maes.append(mae)
+
+        log_avg_metrics(wrmsses, rmses, maes)
         mlflow.end_run()
