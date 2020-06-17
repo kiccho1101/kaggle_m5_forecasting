@@ -8,8 +8,9 @@ from kaggle_m5_forecasting.config import Config
 from kaggle_m5_forecasting import RawData
 from kaggle_m5_forecasting.utils import timer
 from kaggle_m5_forecasting.data.fe_rolling import make_rolling_for_test
-from kaggle_m5_forecasting.metric import calc_metrics
+from kaggle_m5_forecasting.cv_result import CVResult
 import pickle
+import sklearn.metrics
 from typing import List, Tuple, Optional
 from tqdm.autonotebook import tqdm
 
@@ -19,9 +20,10 @@ def start_mlflow() -> int:
         mlflow.end_run()
     except Exception:
         pass
-    if mlflow.get_experiment_by_name("cv") is None:
-        mlflow.create_experiment("cv")
-    experiment_id = mlflow.get_experiment_by_name("cv").experiment_id
+    exp_name = "cv_new"
+    if mlflow.get_experiment_by_name(exp_name) is None:
+        mlflow.create_experiment(exp_name)
+    experiment_id = mlflow.get_experiment_by_name(exp_name).experiment_id
     return experiment_id
 
 
@@ -132,17 +134,38 @@ def log_metrics(
     config = Config()
     d_start = config.CV_START_DAYS[cv_num]
     d_end = config.CV_START_DAYS[cv_num] + 28
-    wrmsse, rmse, mae, _ = calc_metrics(
-        raw,
-        test_pred[(test_pred.d >= d_start) & (test_pred.d < d_end)],
-        test_true[(test_true.d >= d_start) & (test_true.d < d_end)],
+
+    cv_result = CVResult(
+        cv_num=cv_num,
+        config=config,
+        test_pred=test_pred[(test_pred.d >= d_start) & (test_pred.d < d_end)],
     )
+    evaluator = cv_result.get_evaluator(raw)
+    y_pred = test_pred[(test_pred.d >= d_start) & (test_pred.d < d_end)][config.TARGET]
+    y_true = test_true[(test_true.d >= d_start) & (test_true.d < d_end)][config.TARGET]
+
+    wrmsse = np.mean(evaluator.all_scores)
+    rmse = np.sqrt(sklearn.metrics.mean_squared_error(y_true, y_pred))
+    mae = sklearn.metrics.mean_absolute_error(y_true, y_pred)
+
     print(f"==========CV No: {cv_num}=================")
     print("WRMSSE", wrmsse)
     print("RMSE", rmse)
     print("MAE", mae)
     print("=================================")
     mlflow.log_metric(f"WRMSSE_{cv_num}", wrmsse)
+    mlflow.log_metric(f"WRMSSE_0_{cv_num}", evaluator.all_scores[0])
+    mlflow.log_metric(f"WRMSSE_1_{cv_num}", evaluator.all_scores[1])
+    mlflow.log_metric(f"WRMSSE_2_{cv_num}", evaluator.all_scores[2])
+    mlflow.log_metric(f"WRMSSE_3_{cv_num}", evaluator.all_scores[3])
+    mlflow.log_metric(f"WRMSSE_4_{cv_num}", evaluator.all_scores[4])
+    mlflow.log_metric(f"WRMSSE_5_{cv_num}", evaluator.all_scores[5])
+    mlflow.log_metric(f"WRMSSE_6_{cv_num}", evaluator.all_scores[6])
+    mlflow.log_metric(f"WRMSSE_7_{cv_num}", evaluator.all_scores[7])
+    mlflow.log_metric(f"WRMSSE_8_{cv_num}", evaluator.all_scores[8])
+    mlflow.log_metric(f"WRMSSE_9_{cv_num}", evaluator.all_scores[9])
+    mlflow.log_metric(f"WRMSSE_10_{cv_num}", evaluator.all_scores[10])
+    mlflow.log_metric(f"WRMSSE_11_{cv_num}", evaluator.all_scores[11])
     mlflow.log_metric(f"RMSE_{cv_num}", rmse)
     mlflow.log_metric(f"MAE_{cv_num}", mae)
     return wrmsse, rmse, mae
