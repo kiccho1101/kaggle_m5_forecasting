@@ -8,6 +8,17 @@ import seaborn as sns
 from kaggle_m5_forecasting.wrmsse import WRMSSEEvaluator
 
 from kaggle_m5_forecasting.data.load_data import RawData
+from PIL import Image
+
+
+def get_concat_v(im1, im2):
+    width = im1.width
+    if width < im2.width:
+        width = im2.width
+    dst = Image.new("RGB", (width, im1.height + im2.height))
+    dst.paste(im1, (0, 0))
+    dst.paste(im2, (0, im1.height))
+    return dst
 
 
 def create_viz_df(df: pd.DataFrame, lv: int, raw: RawData):
@@ -27,7 +38,8 @@ def create_viz_df(df: pd.DataFrame, lv: int, raw: RawData):
     return df
 
 
-def create_dashboard(evaluator: WRMSSEEvaluator, raw: RawData):
+def create_dashboard(evaluator: WRMSSEEvaluator, raw: RawData, save_path: str):
+    img_num = 0
 
     wrmsses = [np.mean(evaluator.all_scores)] + evaluator.all_scores
     labels = ["Overall"] + [f"Level {i}" for i in range(1, 13)]
@@ -37,6 +49,8 @@ def create_dashboard(evaluator: WRMSSEEvaluator, raw: RawData):
     ax = sns.barplot(x=labels, y=wrmsses)
     ax.set(xlabel="", ylabel="WRMSSE")
     plt.title("WRMSSE by Level", fontsize=20, fontweight="bold")
+    ax.get_figure().savefig(f"{save_path}/{img_num}.png")
+    img_num += 1
     for index, val in enumerate(wrmsses):
         ax.text(index * 1, val + 0.01, round(val, 4), color="black", ha="center")
 
@@ -95,8 +109,10 @@ def create_dashboard(evaluator: WRMSSEEvaluator, raw: RawData):
                 y=1.1,
                 fontweight="bold",
             )
-            plt.tight_layout()
-            plt.show()
+            # plt.tight_layout()
+            # plt.show()
+            fig.savefig(f"{save_path}/{img_num}.png")
+            img_num += 1
 
         trn = create_viz_df(
             getattr(evaluator, f"lv{i}_train_df").iloc[:, -28 * 3 :], i, raw
@@ -132,5 +148,14 @@ def create_dashboard(evaluator: WRMSSEEvaluator, raw: RawData):
                 y=1.1,
                 fontweight="bold",
             )
-        plt.tight_layout()
-        plt.show()
+        fig.savefig(f"{save_path}/{img_num}.png")
+        img_num += 1
+        # plt.tight_layout()
+        # plt.show()
+
+    img = Image.open(f"{save_path}/0.png")
+    os.remove(f"{save_path}/0.png")
+    for i in range(1, 20):
+        img = get_concat_v(img, Image.open(f"{save_path}/{i}.png"))
+        os.remove(f"{save_path}/{i}.png")
+    img.save(f"{save_path}/result.png")

@@ -6,6 +6,8 @@ import glob
 from kaggle_m5_forecasting.config import Config
 from kaggle_m5_forecasting.data.load_data import RawData
 from kaggle_m5_forecasting.wrmsse import WRMSSEEvaluator
+from kaggle_m5_forecasting.cv_dashboard import create_dashboard
+import os
 import sklearn.preprocessing
 from typing import Dict
 
@@ -15,6 +17,7 @@ class CVResult:
     cv_num: int
     test_pred: pd.DataFrame
     config: Optional[Config] = None
+    evaluator: Optional[WRMSSEEvaluator] = None
 
     @staticmethod
     def _create_train_df(
@@ -70,9 +73,13 @@ class CVResult:
 
     def _get_valid_pred_df(self, raw: RawData) -> pd.DataFrame:
         cat_encoders: Dict[str, sklearn.preprocessing.LabelEncoder] = pickle.load(
-            open("./cat_encoders.pkl", "rb")
+            open(
+                os.path.join(os.path.dirname(__file__), "..", "cat_encoders.pkl"), "rb"
+            )
         )
-        valid_pred_df: pd.DataFrame = self.test_pred[["item_id", "store_id", "d", "sales"]]
+        valid_pred_df: pd.DataFrame = self.test_pred[
+            ["item_id", "store_id", "d", "sales"]
+        ]
         valid_pred_df["item_id"] = valid_pred_df["item_id"].apply(
             lambda x: cat_encoders["item_id"].classes_[x]
         )
@@ -99,10 +106,14 @@ class CVResult:
         valid_df = self._create_valid_df(raw, test_start_d, test_end_d)
         calendar_df = self._create_calendar_df(raw, train_start_d, train_end_d)
         prices_df = self._create_prices_df(raw, train_start_d, train_end_d)
-        evaluator = WRMSSEEvaluator(train_df, valid_df, calendar_df, prices_df)
+        self.evaluator = WRMSSEEvaluator(train_df, valid_df, calendar_df, prices_df)
         valid_pred_df = self._get_valid_pred_df(raw)
-        evaluator.score(valid_pred_df.values)
-        return evaluator
+        self.evaluator.score(valid_pred_df.values)
+        return self.evaluator
+
+    def create_dashboard(self, raw: RawData, save_path: str):
+        if self.evaluator is not None:
+            create_dashboard(self.evaluator, raw, save_path)
 
 
 class CVResults:

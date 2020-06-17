@@ -141,6 +141,7 @@ def log_metrics(
         test_pred=test_pred[(test_pred.d >= d_start) & (test_pred.d < d_end)],
     )
     evaluator = cv_result.get_evaluator(raw)
+    cv_result.create_dashboard(raw, f"./output/cv/{start_time}/{cv_num}")
     y_pred = test_pred[(test_pred.d >= d_start) & (test_pred.d < d_end)][config.TARGET]
     y_true = test_true[(test_true.d >= d_start) & (test_true.d < d_end)][config.TARGET]
 
