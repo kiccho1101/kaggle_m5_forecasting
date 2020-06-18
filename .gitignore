@@ -1,6 +1,7 @@
 mlruns
 LightGBM
 
+result.png
 *.csv
 .vscode
 *.pkl
