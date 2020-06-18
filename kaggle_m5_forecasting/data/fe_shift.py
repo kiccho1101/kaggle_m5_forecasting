@@ -14,7 +14,7 @@ class FEShift(M5):
         data: pd.DataFrame = self.load()
         with timer("make shift features"):
             for days in tqdm(
-                list(range(1, 16)) + list(range(28, 35)) + list(range(338, 340))
+                list(range(1, 16)) + list(range(28, 35)) + list(range(362, 369))
             ):
                 data[f"shift_t{days}"] = (
                     data.groupby(["id"])["sales"]

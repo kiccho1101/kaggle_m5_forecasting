@@ -128,6 +128,27 @@ class FERollingMean(M5):
         self.dump(df)
 
 
+class FERollingMeanCenter(M5):
+    def requires(self):
+        return MakeData()
+
+    def run(self):
+        data: pd.DataFrame = self.load()
+        with timer("make rolling mean center"):
+            for lag in tqdm([56, 365]):
+                for w_size in tqdm([7, 31]):
+                    data[f"fe_rolling_mean_center_t{lag}_{w_size}"] = (
+                        data.groupby(["id"])["sales"]
+                        .transform(
+                            lambda x: x.shift(lag).rolling(w_size, center=True).mean()
+                        )
+                        .astype(np.float16)
+                    )
+        df = data.filter(like="fe_rolling_mean_center")
+        print(df.info())
+        self.dump(df)
+
+
 class FERollingZeroRatio(M5):
     def requires(self):
         return MakeData()
