@@ -15,6 +15,12 @@ from typing import List, Tuple, Optional
 from tqdm.autonotebook import tqdm
 
 
+def get_run_name() -> str:
+    print("please put run_name")
+    run_name = input()
+    return run_name
+
+
 def start_mlflow() -> int:
     try:
         mlflow.end_run()
@@ -30,11 +36,21 @@ def start_mlflow() -> int:
 def delete_unused_features(splits: List[Split]) -> List[Split]:
     config = Config()
     for i in range(len(splits)):
+        if config.DROP_OUTLIERS:
+            # Drop all the christmas data
+            splits[i].train = splits[i].train[
+                ~splits[i].train["d"].isin([331, 697, 1062, 1427, 1792])
+            ]
+            # Drop all the thanksgiving data
+            splits[i].train = splits[i].train[
+                ~splits[i].train["d"].isin([300, 664, 1035, 1399, 1413, 1763])
+            ]
+            print(f"CV{i} outliers dropped train shape:", splits[i].train.shape)
         splits[i].train = splits[i].train[config.features + [config.TARGET]]
         print(f"CV{i} train shape:", splits[i].train.shape)
         if config.DROP_NA:
             splits[i].train = splits[i].train.dropna()
-            print(f"CV{i} dropped train shape:", splits[i].train.shape)
+            print(f"CV{i} NA dropped train shape:", splits[i].train.shape)
     return splits
 
 
@@ -45,6 +61,8 @@ def log_params():
     mlflow.log_param("MAX_LAGS", config.MAX_LAGS)
     mlflow.log_param("start_day", config.START_DAY)
     mlflow.log_param("SEED", config.SEED)
+    mlflow.log_param("DROP_NA", config.DROP_NA)
+    mlflow.log_param("DROP_OUTLIERS", config.DROP_OUTLIERS)
     mlflow.log_param("features", ",\n".join([f"'{f}'" for f in config.features]))
 
 
@@ -155,18 +173,6 @@ def log_metrics(
     print("MAE", mae)
     print("=================================")
     mlflow.log_metric(f"WRMSSE_{cv_num}", wrmsse)
-    mlflow.log_metric(f"WRMSSE_0_{cv_num}", evaluator.all_scores[0])
-    mlflow.log_metric(f"WRMSSE_1_{cv_num}", evaluator.all_scores[1])
-    mlflow.log_metric(f"WRMSSE_2_{cv_num}", evaluator.all_scores[2])
-    mlflow.log_metric(f"WRMSSE_3_{cv_num}", evaluator.all_scores[3])
-    mlflow.log_metric(f"WRMSSE_4_{cv_num}", evaluator.all_scores[4])
-    mlflow.log_metric(f"WRMSSE_5_{cv_num}", evaluator.all_scores[5])
-    mlflow.log_metric(f"WRMSSE_6_{cv_num}", evaluator.all_scores[6])
-    mlflow.log_metric(f"WRMSSE_7_{cv_num}", evaluator.all_scores[7])
-    mlflow.log_metric(f"WRMSSE_8_{cv_num}", evaluator.all_scores[8])
-    mlflow.log_metric(f"WRMSSE_9_{cv_num}", evaluator.all_scores[9])
-    mlflow.log_metric(f"WRMSSE_10_{cv_num}", evaluator.all_scores[10])
-    mlflow.log_metric(f"WRMSSE_11_{cv_num}", evaluator.all_scores[11])
     mlflow.log_metric(f"RMSE_{cv_num}", rmse)
     mlflow.log_metric(f"MAE_{cv_num}", mae)
     return wrmsse, rmse, mae

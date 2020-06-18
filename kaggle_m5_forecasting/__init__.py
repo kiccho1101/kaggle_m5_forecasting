@@ -7,6 +7,7 @@ from kaggle_m5_forecasting.data.fe_shift import FEShift
 from kaggle_m5_forecasting.data.fe_rolling import (
     FERollingSum,
     FERollingMean,
+    FERollingMeanCenter,
     FERollingZeroRatio,
     FERollingMeanDiff,
     FERollingStd,

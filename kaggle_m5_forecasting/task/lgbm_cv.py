@@ -10,6 +10,7 @@ from kaggle_m5_forecasting import M5, CombineValFeatures, LoadRawData
 from kaggle_m5_forecasting.data.load_data import RawData
 
 from kaggle_m5_forecasting.task.lgbm import (
+    get_run_name,
     start_mlflow,
     delete_unused_features,
     log_params,
@@ -27,13 +28,15 @@ class LGBMCrossValidation(M5):
         return dict(splits=CombineValFeatures(), raw=LoadRawData())
 
     def run(self):
+        run_name = get_run_name()
+
         splits: List[Split] = self.load("splits")
         raw: RawData = self.load("raw")
 
         splits = delete_unused_features(splits)
 
         experiment_id = start_mlflow()
-        mlflow.start_run(experiment_id=experiment_id, run_name="")
+        mlflow.start_run(experiment_id=experiment_id, run_name=run_name)
         timestamp = mlflow.active_run().info.start_time / 1000
         start_time = datetime.datetime.fromtimestamp(timestamp).strftime(
             "%Y-%m-%d_%H:%M:%S"
