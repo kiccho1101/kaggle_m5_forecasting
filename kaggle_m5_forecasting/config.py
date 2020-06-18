@@ -12,6 +12,7 @@ class Config:
     CV_START_DAYS = [1914, 1886, 1858]
     CV_SAMPLE_RATE = 0.3
     DROP_NA = False
+    DROP_OUTLIERS = True
     TARGET = "sales"
     CLS_THRESHOLD = 0.9
 
@@ -48,12 +49,10 @@ class Config:
         "snap",
         "tm_d",
         "tm_w",
-        "tm_wday",
         "tm_m",
         "tm_y",
         "tm_quarter",
         "tm_wm",
-        "tm_wy",
         "tm_dw",
         "tm_w_end",
         "sell_price",
@@ -122,12 +121,10 @@ class Config:
         # "event_type_1_tomorrow",
         "tm_d",
         "tm_w",
-        "tm_wday",
         "tm_m",
         "tm_y",
         "tm_quarter",
         "tm_wm",
-        "tm_wy",
         "tm_dw",
         "tm_w_end",
         "sell_price",
@@ -153,6 +150,7 @@ class Config:
         "fe_rolling_mean_t28_60",
         "fe_rolling_mean_t28_90",
         "fe_rolling_mean_t28_180",
+        "fe_rolling_mean_center_t365_31",
         "fe_rolling_std_t28_7",
         "fe_rolling_std_t28_30",
         "fe_rolling_std_t28_60",

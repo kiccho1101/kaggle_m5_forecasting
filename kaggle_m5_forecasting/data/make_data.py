@@ -143,13 +143,11 @@ class MakeData(M5):
         with timer("make some features from date"):
             data["tm_d"] = data["date"].dt.day.astype(np.int8)
             data["tm_w"] = data["date"].dt.week.astype(np.int8)
-            data["tm_wday"] = data["date"].dt.weekday.astype(np.int8)
             data["tm_m"] = data["date"].dt.month.astype(np.int8)
             data["tm_y"] = data["date"].dt.year
             data["tm_quarter"] = data["date"].dt.quarter.astype(np.int8)
             data["tm_y"] = (data["tm_y"] - data["tm_y"].min()).astype(np.int8)
             data["tm_wm"] = data["tm_d"].apply(lambda x: np.ceil(x / 7)).astype(np.int8)
-            data["tm_wy"] = data["date"].dt.weekofyear
             data["tm_dw"] = data["date"].dt.dayofweek.astype(np.int8)
             data["tm_w_end"] = (data["tm_dw"] >= 5).astype(np.int8)
             data.loc[data["event_type_1"] == "National", "tm_w_end"] = 1
