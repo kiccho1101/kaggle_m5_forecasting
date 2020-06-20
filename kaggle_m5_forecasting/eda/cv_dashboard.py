@@ -24,4 +24,3 @@ evaluator = cv.results[CV_NUM].get_evaluator(raw)
 #     evaluator, raw, dir_name,
 # )
 print(np.mean(evaluator.all_scores))
-

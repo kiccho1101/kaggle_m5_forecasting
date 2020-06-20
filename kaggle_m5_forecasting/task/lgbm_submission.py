@@ -26,7 +26,6 @@ from kaggle_m5_forecasting.data.combine_features import (
 )
 from kaggle_m5_forecasting.utils import timer
 from kaggle_m5_forecasting.data.fe_rolling import make_rolling_for_test
-from kaggle_m5_forecasting.metric import WRMSSEEvaluator, calc_metrics
 
 
 class LGBMSubmission(M5):
