@@ -167,6 +167,9 @@ class Config:
         "fe_te_store_id_item_id_tm_dw_std",
         "fe_te_item_id_tm_dw_mean",
         "fe_te_item_id_tm_dw_std",
+        "fe_catch22_pca_0",
+        "fe_catch22_pca_1",
+        "fe_catch22_pca_2",
     ]
 
     lgbm_cat_features: List[str] = [
