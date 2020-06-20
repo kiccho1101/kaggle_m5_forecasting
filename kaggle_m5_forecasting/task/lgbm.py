@@ -33,19 +33,40 @@ def start_mlflow() -> int:
     return experiment_id
 
 
+def drop_outliers(splits: List[Split]) -> List[Split]:
+    for i in range(len(splits)):
+        # # Drop all the christmas eve data (12-24)
+        # splits[i].train = splits[i].train[
+        #     ~splits[i].train["d"].isin([330, 696, 1061, 1426, 1791])
+        # ]
+        # Drop all the christmas data (12-25)
+        splits[i].train = splits[i].train[
+            ~splits[i].train["d"].isin([331, 697, 1062, 1427, 1792])
+        ]
+        # # Drop all  12-26 data
+        # splits[i].train = splits[i].train[
+        #     ~splits[i].train["d"].isin([331, 697, 1062, 1427, 1792])
+        # ]
+        # # Drop all  12-27 data
+        # splits[i].train = splits[i].train[
+        #     ~splits[i].train["d"].isin([332, 698, 1063, 1428, 1793])
+        # ]
+        # Drop all the thanksgiving data (11-27)
+        splits[i].train = splits[i].train[
+            ~splits[i].train["d"].isin([300, 664, 1035, 1399, 1413, 1763])
+        ]
+        # # Drop all the new year data (01-01)
+        # splits[i].train = splits[i].train[
+        #     ~splits[i].train["d"].isin([338, 704, 1069, 1434, 1799])
+        # ]
+
+        print(f"CV{i} outliers dropped train shape:", splits[i].train.shape)
+    return splits
+
+
 def delete_unused_features(splits: List[Split]) -> List[Split]:
     config = Config()
     for i in range(len(splits)):
-        if config.DROP_OUTLIERS:
-            # Drop all the christmas data
-            splits[i].train = splits[i].train[
-                ~splits[i].train["d"].isin([331, 697, 1062, 1427, 1792])
-            ]
-            # Drop all the thanksgiving data
-            splits[i].train = splits[i].train[
-                ~splits[i].train["d"].isin([300, 664, 1035, 1399, 1413, 1763])
-            ]
-            print(f"CV{i} outliers dropped train shape:", splits[i].train.shape)
         splits[i].train = splits[i].train[config.features + [config.TARGET]]
         print(f"CV{i} train shape:", splits[i].train.shape)
         if config.DROP_NA:
@@ -159,7 +180,7 @@ def log_metrics(
         test_pred=test_pred[(test_pred.d >= d_start) & (test_pred.d < d_end)],
     )
     evaluator = cv_result.get_evaluator(raw)
-    cv_result.create_dashboard(raw, f"./output/cv/{start_time}/{cv_num}")
+    # cv_result.create_dashboard(raw, f"./output/cv/{start_time}/{cv_num}")
     y_pred = test_pred[(test_pred.d >= d_start) & (test_pred.d < d_end)][config.TARGET]
     y_true = test_true[(test_true.d >= d_start) & (test_true.d < d_end)][config.TARGET]
 

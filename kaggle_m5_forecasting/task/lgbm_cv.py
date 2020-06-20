@@ -8,10 +8,12 @@ import mlflow.lightgbm
 from kaggle_m5_forecasting.base import Split
 from kaggle_m5_forecasting import M5, CombineValFeatures, LoadRawData
 from kaggle_m5_forecasting.data.load_data import RawData
+from kaggle_m5_forecasting.config import Config
 
 from kaggle_m5_forecasting.task.lgbm import (
     get_run_name,
     start_mlflow,
+    drop_outliers,
     delete_unused_features,
     log_params,
     convert_to_lgb_dataset,
@@ -28,11 +30,15 @@ class LGBMCrossValidation(M5):
         return dict(splits=CombineValFeatures(), raw=LoadRawData())
 
     def run(self):
+        config = Config()
+
         run_name = get_run_name()
 
         splits: List[Split] = self.load("splits")
         raw: RawData = self.load("raw")
 
+        if config.DROP_OUTLIERS:
+            splits = drop_outliers(splits)
         splits = delete_unused_features(splits)
 
         experiment_id = start_mlflow()
