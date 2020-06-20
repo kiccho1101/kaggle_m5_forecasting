@@ -28,8 +28,9 @@ class CVResult:
             .iloc[:, -1]
             .name.replace("d_", "")
         )
-        train_drop_cols = [f"d_{d}" for d in range(1, train_start_d)]
-        train_drop_cols += [f"d_{d}" for d in range(train_end_d + 1, train_max_d + 1)]
+
+        train_drop_cols = [f"d_{d}" for d in range(train_end_d + 1, train_max_d + 1)]
+
         train_df: pd.DataFrame = raw.sales_train_validation.drop(
             train_drop_cols, axis=1
         )
@@ -102,18 +103,27 @@ class CVResult:
         test_start_d = self.test_pred["d"].min()
         test_end_d = self.test_pred["d"].max()
 
-        train_df = self._create_train_df(raw, train_start_d, train_end_d)
-        valid_df = self._create_valid_df(raw, test_start_d, test_end_d)
-        calendar_df = self._create_calendar_df(raw, train_start_d, train_end_d)
-        prices_df = self._create_prices_df(raw, train_start_d, train_end_d)
-        self.evaluator = WRMSSEEvaluator(train_df, valid_df, calendar_df, prices_df)
-        valid_pred_df = self._get_valid_pred_df(raw)
-        self.evaluator.score(valid_pred_df.values)
+        self.train_df = self._create_train_df(raw, train_start_d, train_end_d)
+        self.valid_df = self._create_valid_df(raw, test_start_d, test_end_d)
+
+        # self.calendar_df = self._create_calendar_df(raw, train_start_d, train_end_d)
+        # self.prices_df = self._create_prices_df(raw, train_start_d, train_end_d)
+
+        self.calendar_df = raw.calendar
+        self.prices_df = raw.sell_prices
+
+        self.evaluator = WRMSSEEvaluator(
+            self.train_df, self.valid_df, self.calendar_df, self.prices_df
+        )
+
+        self.valid_pred_df = self._get_valid_pred_df(raw)
+        self.evaluator.score(self.valid_pred_df.values)
+
         return self.evaluator
 
-    def create_dashboard(self, raw: RawData, save_path: str):
-        if self.evaluator is not None:
-            create_dashboard(self.evaluator, raw, save_path)
+    # def create_dashboard(self, raw: RawData, save_path: str):
+    #     if self.evaluator is not None:
+    #         create_dashboard(self.evaluator, raw, save_path)
 
 
 class CVResults:
