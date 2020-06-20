@@ -12,6 +12,18 @@ from kaggle_m5_forecasting.utils import (
 )
 import pickle
 from tqdm import tqdm
+import math
+import decimal
+from datetime import datetime
+
+
+def get_moon_phase(d):  # 0=new, 4=full; 4 days/phase
+    dec = decimal.Decimal
+    diff = d - datetime(2001, 1, 1)
+    days = dec(diff.days) + (dec(diff.seconds) / dec(86400))
+    lunations = dec("0.20439731") + (days * dec("0.03386319269"))
+    phase_index = math.floor((lunations % dec(1) * dec(8)) + dec("0.5"))
+    return int(phase_index)
 
 
 class MakeData(M5):
@@ -150,6 +162,9 @@ class MakeData(M5):
             data["tm_wm"] = data["tm_d"].apply(lambda x: np.ceil(x / 7)).astype(np.int8)
             data["tm_dw"] = data["date"].dt.dayofweek.astype(np.int8)
             data["tm_w_end"] = (data["tm_dw"] >= 5).astype(np.int8)
+            data["tm_moon_phase"] = (
+                data["date"].map(lambda d: get_moon_phase(d)).astype(np.int8)
+            )
             data.loc[data["event_type_1"] == "National", "tm_w_end"] = 1
             del data["date"]
             print_mem_usage(data)
