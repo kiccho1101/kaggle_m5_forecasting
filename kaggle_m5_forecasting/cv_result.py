@@ -106,9 +106,6 @@ class CVResult:
         self.train_df = self._create_train_df(raw, train_start_d, train_end_d)
         self.valid_df = self._create_valid_df(raw, test_start_d, test_end_d)
 
-        # self.calendar_df = self._create_calendar_df(raw, train_start_d, train_end_d)
-        # self.prices_df = self._create_prices_df(raw, train_start_d, train_end_d)
-
         self.calendar_df = raw.calendar
         self.prices_df = raw.sell_prices
 
@@ -121,9 +118,9 @@ class CVResult:
 
         return self.evaluator
 
-    # def create_dashboard(self, raw: RawData, save_path: str):
-    #     if self.evaluator is not None:
-    #         create_dashboard(self.evaluator, raw, save_path)
+    def create_dashboard(self, raw: RawData, save_path: str):
+        if self.evaluator is not None:
+            create_dashboard(self.evaluator, raw, save_path)
 
 
 class CVResults:
