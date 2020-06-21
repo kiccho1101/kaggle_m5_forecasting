@@ -9,6 +9,10 @@ from multiprocessing import Pool
 import random
 import os
 import torch
+import sklearn.preprocessing
+from typing import Dict
+from tqdm import tqdm
+import pickle
 
 
 @contextmanager
@@ -91,3 +95,13 @@ def df_parallelize_run(func, t_split: List[Any]):
     pool.close()
     pool.join()
     return df
+
+
+def decode_ids(data: pd.DataFrame, root_dir: str = "./../..") -> pd.DataFrame:
+
+    cat_encoders: Dict[str, sklearn.preprocessing.LabelEncoder] = pickle.load(
+        open(f"{root_dir}/cat_encoders.pkl", "rb")
+    )
+    for col in tqdm(["item_id", "dept_id", "cat_id", "store_id", "state_id"]):
+        data[col] = data[col].apply(lambda x: cat_encoders[col].classes_[x])
+    return data
