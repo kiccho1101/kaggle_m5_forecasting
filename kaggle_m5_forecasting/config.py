@@ -49,6 +49,7 @@ class Config:
         "snap_CA",
         "snap_TX",
         "snap_WI",
+        "snap",
         "tm_d",
         "tm_w",
         "tm_m",
@@ -102,6 +103,10 @@ class Config:
         "fe_weather_maxtempC",
         "fe_weather_mintempC",
         "fe_weather_humidity",
+        "fe_weather_sunHour",
+        "fe_weather_cloudcover",
+        "fe_unemployment",
+        "fe_stock",
     ]
 
     lgbm_cat_features: List[str] = [

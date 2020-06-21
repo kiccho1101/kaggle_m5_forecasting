@@ -19,6 +19,8 @@ from kaggle_m5_forecasting.data.fe_price_rolling import FEPriceRolling
 from kaggle_m5_forecasting.data.fe_catch22 import FECatch22
 from kaggle_m5_forecasting.data.fe_catch22_pca import FECatch22PCA
 from kaggle_m5_forecasting.data.fe_weather import FEWeather
+from kaggle_m5_forecasting.data.fe_unemployment import FEUnemployment
+from kaggle_m5_forecasting.data.fe_stock import FEStock
 from kaggle_m5_forecasting.data.split_data import SplitValData, SplitData
 from kaggle_m5_forecasting.data.target_encoding import TEValData, TEData
 from kaggle_m5_forecasting.data.target_encoding_catch22 import (

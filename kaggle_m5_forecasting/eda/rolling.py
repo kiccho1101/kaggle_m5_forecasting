@@ -4,43 +4,20 @@ import numpy as np
 import matplotlib.pyplot as plt
 import sklearn.metrics
 from thunderbolt import Thunderbolt
+from kaggle_m5_forecasting.utils import timer
+import sys
+import os
+
+sys.path.append(os.getcwd() + "/../..")
 
 tb = Thunderbolt("./../../resource")
 data: pd.DataFrame = tb.get_data("MakeData")
 
 # %%
 
-df = data[data.id == data.loc[np.random.randint(0, len(data) - 1), "id"]].reset_index(
-    drop=True
-)
-
-lag = 7
-w_sizes = [7, 30, 60, 90, 180]
-w_sizes = [30]
-alpha = 0.03
-for w_size in w_sizes:
-    df[f"r_t{lag}_{w_size}"] = df["sales"].shift(lag).rolling(w_size).mean()
-features = ["sales"] + [f"r_t{lag}_{w_size}" for w_size in w_sizes]
-df[features].tail(200).plot()
-plt.show()
-
-
-df = df[features].dropna()
-pd.concat(
-    [
-        df.drop("sales", axis=1)
-        .apply(lambda x: np.sqrt(sklearn.metrics.mean_squared_error(df["sales"], x)))
-        .rename("rmse"),
-        df.drop("sales", axis=1)
-        .apply(lambda x: sklearn.metrics.mean_absolute_error(df["sales"], x))
-        .rename("mae"),
-    ],
-    axis=1,
-).sort_values("rmse")
-
-
-# %%
-test = data[(data.d > 1885) & (data.d < 1914)]
-
-
-# %%
+with timer("calc rolling_store_id_cat_id_mean"):
+    lag = 28
+    w_size = 30
+    data["fe_rolling_store_id_cat_id_mean"] = data.groupby(["store_id", "cat_id"])[
+        "sales"
+    ].transform(lambda x: x.shift(lag).rolling(w_size).mean())
