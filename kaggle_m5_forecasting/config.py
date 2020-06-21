@@ -105,8 +105,7 @@ class Config:
         "fe_weather_sunHour",
         "fe_weather_cloudcover",
         "fe_unemployment",
-        "fe_stock",
-        "fe_unemployment",
+        "fe_stock_volume",
     ]
 
     lgbm_cat_features: List[str] = [
