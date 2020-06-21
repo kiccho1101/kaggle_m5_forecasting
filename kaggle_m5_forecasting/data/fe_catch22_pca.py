@@ -16,7 +16,7 @@ class FECatch22PCA(M5):
         catch22_df: pd.DataFrame = self.load("catch22_df")
 
         catch22_df = catch22_df.drop(["percentile75", "percentile100", "std"], axis=1)
-        catch22_scaled = sklearn.preprocessing.MinMaxScaler().fit_transform(
+        catch22_scaled = sklearn.preprocessing.StandardScaler().fit_transform(
             catch22_df.values
         )
 
