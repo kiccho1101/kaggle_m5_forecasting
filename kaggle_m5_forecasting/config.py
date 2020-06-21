@@ -96,12 +96,15 @@ class Config:
         "fe_te_store_id_item_id_tm_dw_std",
         "fe_te_item_id_tm_dw_mean",
         "fe_te_item_id_tm_dw_std",
-        # "fe_catch22_pca_0",
-        # "fe_catch22_pca_1",
-        # "fe_catch22_pca_2",
-        "fe_weather_maxtempC",
+        "fe_catch22_pca_0",
+        "fe_catch22_pca_1",
+        "fe_catch22_pca_2",
         "fe_weather_mintempC",
-        "fe_weather_humidity",
+        # "fe_weather_maxtempC",
+        # "fe_weather_humidity",
+        # "fe_weather_sunHour",
+        # "fe_weather_cloudcover",
+        "fe_unemployment",
     ]
 
     lgbm_cat_features: List[str] = [
