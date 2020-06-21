@@ -17,6 +17,7 @@ from kaggle_m5_forecasting.data.fe_rolling import (
 )
 from kaggle_m5_forecasting.data.fe_revenue import FERevenue
 from kaggle_m5_forecasting.data.fe_catch22_pca import FECatch22PCA
+from kaggle_m5_forecasting.data.fe_weather import FEWeather
 from kaggle_m5_forecasting.data.target_encoding import TEValData, TEData
 from kaggle_m5_forecasting.data.split_data import SplitValData, SplitData
 from kaggle_m5_forecasting.utils import timer
@@ -46,6 +47,7 @@ class CombineValFeatures(M5):
             fe_rolling_kurt=FERollingKurt(),
             fe_catch22_pca=FECatch22PCA(),
             fe_revenue=FERevenue(),
+            fe_weather=FEWeather(),
             te_val_data=TEValData(),
         )
 
@@ -68,6 +70,7 @@ class CombineValFeatures(M5):
                         self.load("fe_rolling_skew"),
                         self.load("fe_rolling_kurt"),
                         self.load("fe_revenue"),
+                        self.load("fe_weather"),
                         self.load("fe_catch22_pca"),
                     ],
                     axis=1,
@@ -111,6 +114,7 @@ class CombineFeatures(M5):
             fe_rolling_kurt=FERollingKurt(),
             fe_revenue=FERevenue(),
             fe_catch22_pca=FECatch22PCA(),
+            fe_weather=FEWeather(),
             te_data=TEData(),
         )
 
@@ -135,6 +139,7 @@ class CombineFeatures(M5):
                         self.load("fe_revenue"),
                         self.load("te_data"),
                         self.load("fe_catch22_pca"),
+                        self.load("fe_weather"),
                     ],
                     axis=1,
                 )
