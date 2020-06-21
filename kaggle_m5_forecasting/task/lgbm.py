@@ -84,6 +84,7 @@ def log_params():
     mlflow.log_param("SEED", config.SEED)
     mlflow.log_param("DROP_NA", config.DROP_NA)
     mlflow.log_param("DROP_OUTLIERS", config.DROP_OUTLIERS)
+    mlflow.log_param("CV_SAMPLE_RATE", config.CV_SAMPLE_RATE)
     mlflow.log_param("features", ",\n".join([f"'{f}'" for f in config.features]))
 
 
@@ -111,7 +112,7 @@ def train(
             train_set,
             num_boost_round=config.num_boost_round,
             verbose_eval=verbose_eval,
-            early_stopping_rounds=early_stopping_rounds,
+            # early_stopping_rounds=early_stopping_rounds,
             valid_sets=valid_sets,
         )
     return model
@@ -180,7 +181,7 @@ def log_metrics(
         test_pred=test_pred[(test_pred.d >= d_start) & (test_pred.d < d_end)],
     )
     evaluator = cv_result.get_evaluator(raw)
-    # cv_result.create_dashboard(raw, f"./output/cv/{start_time}/{cv_num}")
+    cv_result.create_dashboard(raw, f"./output/cv/{start_time}/{cv_num}")
     y_pred = test_pred[(test_pred.d >= d_start) & (test_pred.d < d_end)][config.TARGET]
     y_true = test_true[(test_true.d >= d_start) & (test_true.d < d_end)][config.TARGET]
 
