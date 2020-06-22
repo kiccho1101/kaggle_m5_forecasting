@@ -141,9 +141,9 @@ class MakeData(M5):
             data["tm_wm"] = data["tm_d"].apply(lambda x: np.ceil(x / 7)).astype(np.int8)
             data["tm_dw"] = data["date"].dt.dayofweek.astype(np.int8)
             data["tm_w_end"] = (data["tm_dw"] >= 5).astype(np.int8)
-            data["tm_moon_phase"] = (
-                data["date"].map(lambda d: get_moon_phase(d)).astype(np.int8)
-            )
+            # data["tm_moon_phase"] = (
+            #     data["date"].map(lambda d: get_moon_phase(d)).astype(np.int8)
+            # )
             data.loc[data["event_type_1"] == "National", "tm_w_end"] = 1
             del data["date"]
             print_mem_usage(data)
@@ -170,10 +170,6 @@ class MakeData(M5):
                 "event_type_1",
                 "event_name_2",
                 "event_type_2",
-                "event_name_1_yesterday",
-                "event_type_1_yesterday",
-                "event_name_1_tomorrow",
-                "event_type_1_tomorrow",
             ]
             for feature in tqdm(cat_features):
                 encoder = sklearn.preprocessing.LabelEncoder()
