@@ -7,7 +7,7 @@ class Config:
     SEED = 402
     MAX_LAGS = 100
     START_DAY = 300
-    num_boost_round = 250
+    num_boost_round = 500
     MIN_SUM = 0
     CV_START_DAYS = [1914, 1886, 1858]
     CV_SAMPLE_RATE = 0.5
@@ -106,6 +106,34 @@ class Config:
         "fe_weather_cloudcover",
         "fe_unemployment",
         "fe_stock_volume",
+        "fe_rolling_item_id_mean_28_7",
+        "fe_rolling_item_id_mean_28_30",
+        "fe_rolling_item_id_mean_28_90",
+        "fe_rolling_item_id_mean_28_180",
+        "fe_rolling_item_id_std_28_7",
+        "fe_rolling_item_id_std_28_30",
+        "fe_rolling_item_id_std_28_90",
+        "fe_rolling_item_id_std_28_180",
+        "fe_rolling_cat_id_mean_28_7",
+        "fe_rolling_cat_id_mean_28_30",
+        "fe_rolling_cat_id_mean_28_90",
+        "fe_rolling_cat_id_mean_28_180",
+        "fe_rolling_store_id_cat_id_mean_28_7",
+        "fe_rolling_store_id_cat_id_mean_28_30",
+        "fe_rolling_store_id_cat_id_mean_28_90",
+        "fe_rolling_store_id_cat_id_mean_28_180",
+        "fe_rolling_store_id_dept_id_mean_28_7",
+        "fe_rolling_store_id_dept_id_mean_28_30",
+        "fe_rolling_store_id_dept_id_mean_28_90",
+        "fe_rolling_store_id_dept_id_mean_28_180",
+        "fe_rolling_state_id_item_id_mean_28_7",
+        "fe_rolling_state_id_item_id_mean_28_30",
+        "fe_rolling_state_id_item_id_mean_28_90",
+        "fe_rolling_state_id_item_id_mean_28_180",
+        "fe_rolling_state_id_item_id_std_28_7",
+        "fe_rolling_state_id_item_id_std_28_30",
+        "fe_rolling_state_id_item_id_std_28_90",
+        "fe_rolling_state_id_item_id_std_28_180",
     ]
 
     lgbm_cat_features: List[str] = [
