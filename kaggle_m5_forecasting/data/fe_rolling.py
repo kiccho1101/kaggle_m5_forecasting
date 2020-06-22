@@ -134,7 +134,7 @@ class FERollingGroupMean(M5):
                             )
                         ] = data.groupby(group)["sales"].transform(
                             lambda x: x.shift(lag).rolling(w_size).mean()
-                        )
+                        ).astype(np.float16)
         df = data.filter(like="fe_rolling_")
         print(df.info())
         self.dump(df)
@@ -165,7 +165,7 @@ class FERollingGroupStd(M5):
                             )
                         ] = data.groupby(group)["sales"].transform(
                             lambda x: x.shift(lag).rolling(w_size).std()
-                        )
+                        ).astype(np.float16)
         df = data.filter(like="fe_rolling_")
         print(df.info())
         self.dump(df)

@@ -81,12 +81,6 @@ class MakeData(M5):
         reduce_mem_usage(data)
 
         with timer("make calendar events"):
-            raw.calendar["cal_christmas_eve"] = (
-                raw.calendar["date"].str[5:] == "12-24"
-            ).astype(np.int8)
-            raw.calendar["cal_christmas"] = (
-                raw.calendar["date"].str[5:] == "12-25"
-            ).astype(np.int8)
             raw.calendar["cal_blackfriday"] = (
                 raw.calendar["date"]
                 .str[5:]
@@ -106,18 +100,6 @@ class MakeData(M5):
             raw.calendar.loc[
                 raw.calendar["cal_blackfriday"] == 1, "event_type_1"
             ] = "other"
-            raw.calendar["event_name_1_yesterday"] = raw.calendar["event_name_1"].shift(
-                1
-            )
-            raw.calendar["event_type_1_yesterday"] = raw.calendar["event_type_1"].shift(
-                1
-            )
-            raw.calendar["event_name_1_tomorrow"] = raw.calendar["event_name_1"].shift(
-                -1
-            )
-            raw.calendar["event_type_1_tomorrow"] = raw.calendar["event_type_1"].shift(
-                -1
-            )
 
         with timer("merge calendar"):
             icols = [
@@ -125,17 +107,14 @@ class MakeData(M5):
                 "event_type_1",
                 "event_name_2",
                 "event_type_2",
-                "event_name_1_tomorrow",
-                "event_type_1_tomorrow",
-                "event_name_1_yesterday",
-                "event_type_1_yesterday",
                 "snap_CA",
                 "snap_TX",
                 "snap_WI",
             ]
             data = data.merge(
                 raw.calendar.drop(
-                    ["wm_yr_wk", "weekday", "wday", "month", "year"], axis=1
+                    ["wm_yr_wk", "weekday", "wday", "month", "year", "cal_blackfriday"],
+                    axis=1,
                 ),
                 on=["d"],
                 how="left",

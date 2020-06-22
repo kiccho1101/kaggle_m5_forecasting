@@ -42,6 +42,15 @@ class FEWeather(M5):
         raw.calendar["date_time"] = raw.calendar["date"]
 
         weather = read_weather_data()
+        weather = weather[
+            [
+                "fe_weather_mintempC",
+                "fe_weather_maxtempC",
+                "fe_weather_humidity",
+                "fe_weather_sunHour",
+                "fe_weather_cloudcover",
+            ]
+        ]
 
         with timer("merge data"):
             data = data.merge(
