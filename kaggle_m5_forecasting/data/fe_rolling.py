@@ -128,6 +128,35 @@ class FERollingMean(M5):
         self.dump(df)
 
 
+class FERollingGroupMean(M5):
+    def requires(self):
+        return MakeData()
+
+    def run(self):
+        data: pd.DataFrame = self.load()
+        groups = [
+            ["item_id"],
+            ["store_id"],
+            ["store_id", "cat_id"],
+            ["store_id", "dept_id"],
+            ["state_id", "item_id"],
+        ]
+        with timer("make rolling cat_id, item_id mean"):
+            for group in groups:
+                for lag in tqdm([7, 28]):
+                    for w_size in tqdm([7, 30, 90, 180]):
+                        data[
+                            "fe_rolling_{}_mean_{}_{}".format(
+                                "_".join(group), lag, w_size
+                            )
+                        ] = data.groupby(group)["sales"].transform(
+                            lambda x: x.shift(lag).rolling(w_size).mean()
+                        )
+        df = data.filter(like="fe_rolling_")
+        print(df.info())
+        self.dump(df)
+
+
 class FERollingMeanCenter(M5):
     def requires(self):
         return MakeData()
