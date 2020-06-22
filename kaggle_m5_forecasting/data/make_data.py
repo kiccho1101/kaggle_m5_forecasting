@@ -176,11 +176,7 @@ class MakeData(M5):
 
         with timer("convert 'd' to int"):
             data["d"] = data["d"].apply(lambda x: x[2:]).astype(np.int16)
-            data["tm_season_t5"] = pd.cut(data["d"], 5).cat.codes
-            data["tm_season_t8"] = pd.cut(data["d"], 8).cat.codes
-            data["tm_season_t10"] = pd.cut(data["d"], 10).cat.codes
             data["sales_is_zero"] = (data["sales"] == 0).astype(np.int8)
-            data["sales_is_one"] = (data["sales"] == 1).astype(np.int8)
             print_mem_usage(data)
 
         with timer("label encoding"):

@@ -90,25 +90,6 @@ def make_rolling_for_test(
     return test
 
 
-class FERollingSum(M5):
-    def requires(self):
-        return MakeData()
-
-    def run(self):
-        data: pd.DataFrame = self.load()
-        with timer("make rolling sum"):
-            lag_wsize = []
-            for lag in [0, 1]:
-                for w_size in [30, 50]:
-                    lag_wsize.append([data[["id", "d", "sales"]], lag, w_size, "sum"])
-            data = pd.concat(
-                [data, df_parallelize_run(make_lag_roll, lag_wsize)], axis=1
-            )
-        df = data.filter(like="fe_rolling_sum")
-        print(df.info())
-        self.dump(df)
-
-
 class FERollingMean(M5):
     def requires(self):
         return MakeData()
@@ -146,7 +127,7 @@ class FERollingGroupMean(M5):
         with timer("make rolling cat_id, item_id mean"):
             for group in groups:
                 for lag in tqdm([7, 28]):
-                    for w_size in tqdm([7, 30, 90, 180]):
+                    for w_size in tqdm([7, 30, 60, 90, 180]):
                         data[
                             "fe_rolling_{}_mean_{}_{}".format(
                                 "_".join(group), lag, w_size
@@ -159,68 +140,33 @@ class FERollingGroupMean(M5):
         self.dump(df)
 
 
-class FERollingMeanCenter(M5):
+class FERollingGroupStd(M5):
     def requires(self):
         return MakeData()
 
     def run(self):
         data: pd.DataFrame = self.load()
-        with timer("make rolling mean center"):
-            for lag in tqdm([56, 365]):
-                for w_size in tqdm([7, 31]):
-                    data[f"fe_rolling_mean_center_t{lag}_{w_size}"] = (
-                        data.groupby(["id"])["sales"]
-                        .transform(
-                            lambda x: x.shift(lag).rolling(w_size, center=True).mean()
+        groups = [
+            ["item_id"],
+            ["store_id"],
+            ["cat_id"],
+            ["dept_id"],
+            ["store_id", "cat_id"],
+            ["store_id", "dept_id"],
+            ["state_id", "item_id"],
+        ]
+        with timer("make rolling cat_id, item_id mean"):
+            for group in groups:
+                for lag in tqdm([7, 28]):
+                    for w_size in tqdm([7, 30, 60, 90, 180]):
+                        data[
+                            "fe_rolling_{}_std_{}_{}".format(
+                                "_".join(group), lag, w_size
+                            )
+                        ] = data.groupby(group)["sales"].transform(
+                            lambda x: x.shift(lag).rolling(w_size).std()
                         )
-                        .astype(np.float16)
-                    )
-        df = data.filter(like="fe_rolling_mean_center")
-        print(df.info())
-        self.dump(df)
-
-
-class FERollingZeroRatio(M5):
-    def requires(self):
-        return MakeData()
-
-    def run(self):
-        data: pd.DataFrame = self.load()
-        with timer("make rolling zero_ratio"):
-            lag_wsize = []
-            for lag in [7, 28]:
-                for w_size in [7, 30, 60, 90, 180]:
-                    lag_wsize.append(
-                        [
-                            data[["id", "d", "sales", "sales_is_zero"]],
-                            lag,
-                            w_size,
-                            "zero_ratio",
-                        ]
-                    )
-            data = pd.concat(
-                [data, df_parallelize_run(make_lag_roll, lag_wsize)], axis=1
-            )
-        df = data.filter(like="fe_rolling_zero_ratio")
-        print(df.info())
-        self.dump(df)
-
-
-class FERollingMeanDiff(M5):
-    def requires(self):
-        return dict(data=MakeData(), roll=FERollingMean())
-
-    def run(self):
-        data: pd.DataFrame = self.load("data")
-        roll: pd.DataFrame = self.load("roll")
-
-        # %%
-        for col in roll.columns:
-            lag = int(col.split("_")[3].replace("t", ""))
-            data[col.replace("fe_rolling_mean", "fe_rolling_mean_diff")] = roll[
-                col
-            ] - data["sales"].shift(lag)
-        df = data.filter(like="fe_rolling_mean_diff")
+        df = data.filter(like="fe_rolling_")
         print(df.info())
         self.dump(df)
 

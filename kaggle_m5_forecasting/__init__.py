@@ -5,12 +5,9 @@ from kaggle_m5_forecasting.data.fe_tsfresh import FETSFresh
 from kaggle_m5_forecasting.data.fe_price_basic import FEPriceBasic
 from kaggle_m5_forecasting.data.fe_shift import FEShift
 from kaggle_m5_forecasting.data.fe_rolling import (
-    FERollingSum,
     FERollingMean,
     FERollingGroupMean,
-    FERollingMeanCenter,
-    FERollingZeroRatio,
-    FERollingMeanDiff,
+    FERollingGroupStd,
     FERollingStd,
     FERollingSkew,
     FERollingKurt,

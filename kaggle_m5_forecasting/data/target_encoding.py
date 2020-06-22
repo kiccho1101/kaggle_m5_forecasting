@@ -20,12 +20,6 @@ def target_encoding(train_df: pd.DataFrame) -> pd.DataFrame:
         ["store_id", "dept_id", "tm_dw"],
         ["store_id", "item_id"],
         ["store_id", "item_id", "tm_dw"],
-        # ["store_id", "tm_season_t8"],
-        # ["store_id", "item_id", "tm_season_t5"],
-        # ["store_id", "tm_dw", "tm_season_t5"],
-        # ["store_id", "item_id", "tm_dw", "tm_season_t5"],
-        # ["store_id", "item_id", "tm_season_t8"],
-        # ["store_id", "item_id", "tm_season_t10"],
     ]
     result: List[Tuple[List[str], pd.DataFrame]] = []
     methods = ["mean", "std", "skew"]
