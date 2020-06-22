@@ -109,12 +109,19 @@ class Config:
         "fe_rolling_store_id_cat_id_mean_28_7",
         "fe_rolling_store_id_cat_id_mean_28_30",
         "fe_rolling_store_id_cat_id_mean_28_90",
+        "fe_rolling_store_id_cat_id_mean_28_180",
         "fe_rolling_state_id_item_id_mean_28_7",
         "fe_rolling_state_id_item_id_mean_28_30",
         "fe_rolling_state_id_item_id_mean_28_90",
+        "fe_rolling_state_id_item_id_mean_28_180",
         "fe_rolling_item_id_mean_28_7",
         "fe_rolling_item_id_mean_28_30",
         "fe_rolling_item_id_mean_28_90",
+        "fe_rolling_item_id_mean_28_180",
+        "fe_rolling_store_id_dept_id_mean_28_7",
+        "fe_rolling_store_id_dept_id_mean_28_30",
+        "fe_rolling_store_id_dept_id_mean_28_90",
+        "fe_rolling_store_id_dept_id_mean_28_180",
     ]
 
     lgbm_cat_features: List[str] = [

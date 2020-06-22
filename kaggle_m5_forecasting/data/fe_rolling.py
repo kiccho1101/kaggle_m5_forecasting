@@ -137,6 +137,8 @@ class FERollingGroupMean(M5):
         groups = [
             ["item_id"],
             ["store_id"],
+            ["cat_id"],
+            ["dept_id"],
             ["store_id", "cat_id"],
             ["store_id", "dept_id"],
             ["state_id", "item_id"],
