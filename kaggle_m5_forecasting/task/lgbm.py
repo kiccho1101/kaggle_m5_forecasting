@@ -11,7 +11,7 @@ from kaggle_m5_forecasting.data.fe_rolling import make_rolling_for_test
 from kaggle_m5_forecasting.cv_result import CVResult
 import pickle
 import sklearn.metrics
-from typing import List, Tuple, Optional
+from typing import List, Tuple, Optional, Dict, Any
 from tqdm.autonotebook import tqdm
 
 
@@ -33,45 +33,28 @@ def start_mlflow() -> int:
     return experiment_id
 
 
-def drop_outliers(splits: List[Split]) -> List[Split]:
-    for i in range(len(splits)):
-        # # Drop all the christmas eve data (12-24)
-        # splits[i].train = splits[i].train[
-        #     ~splits[i].train["d"].isin([330, 696, 1061, 1426, 1791])
-        # ]
-        # Drop all the christmas data (12-25)
-        splits[i].train = splits[i].train[
-            ~splits[i].train["d"].isin([331, 697, 1062, 1427, 1792])
-        ]
-        # # Drop all  12-26 data
-        # splits[i].train = splits[i].train[
-        #     ~splits[i].train["d"].isin([331, 697, 1062, 1427, 1792])
-        # ]
-        # # Drop all  12-27 data
-        # splits[i].train = splits[i].train[
-        #     ~splits[i].train["d"].isin([332, 698, 1063, 1428, 1793])
-        # ]
-        # Drop all the thanksgiving data (11-27)
-        splits[i].train = splits[i].train[
-            ~splits[i].train["d"].isin([300, 664, 1035, 1399, 1413, 1763])
-        ]
-        # # Drop all the new year data (01-01)
-        # splits[i].train = splits[i].train[
-        #     ~splits[i].train["d"].isin([338, 704, 1069, 1434, 1799])
-        # ]
-
-        print(f"CV{i} outliers dropped train shape:", splits[i].train.shape)
-    return splits
-
-
 def delete_unused_features(splits: List[Split]) -> List[Split]:
     config = Config()
     for i in range(len(splits)):
-        splits[i].train = splits[i].train[config.features + [config.TARGET]]
+        splits[i].train = splits[i].train[["id", "d", config.TARGET] + config.features]
         print(f"CV{i} train shape:", splits[i].train.shape)
         if config.DROP_NA:
             splits[i].train = splits[i].train.dropna()
             print(f"CV{i} NA dropped train shape:", splits[i].train.shape)
+    return splits
+
+
+def drop_outliers(splits: List[Split]) -> List[Split]:
+    for i in range(len(splits)):
+        # Drop all the christmas data (12-25)
+        splits[i].train = splits[i].train[
+            ~splits[i].train["d"].isin([331, 697, 1062, 1427, 1792])
+        ]
+        # Drop all the thanksgiving data (11-27)
+        splits[i].train = splits[i].train[
+            ~splits[i].train["d"].isin([300, 664, 1035, 1399, 1413, 1763])
+        ]
+        print(f"CV{i} outliers dropped train shape:", splits[i].train.shape)
     return splits
 
 
@@ -85,7 +68,23 @@ def log_params():
     mlflow.log_param("DROP_NA", config.DROP_NA)
     mlflow.log_param("DROP_OUTLIERS", config.DROP_OUTLIERS)
     mlflow.log_param("CV_SAMPLE_RATE", config.CV_SAMPLE_RATE)
+    mlflow.log_param("MODEL", config.MODEL)
     mlflow.log_param("features", ",\n".join([f"'{f}'" for f in config.features]))
+
+
+def get_zero_nonzero_ids(
+    raw: RawData, zero_ratio_threshold: float = 0.8
+) -> Tuple[pd.Series, pd.Series]:
+    raw.sales_train_validation["zero_ratio"] = raw.sales_train_validation.filter(
+        like="d_"
+    ).apply(lambda row: (row == 0).mean(), axis=1)
+    zero_ids = raw.sales_train_validation[
+        raw.sales_train_validation["zero_ratio"] > zero_ratio_threshold
+    ]["id"]
+    nonzero_ids = raw.sales_train_validation[
+        raw.sales_train_validation["zero_ratio"] <= zero_ratio_threshold
+    ]["id"]
+    return zero_ids, nonzero_ids
 
 
 def convert_to_lgb_dataset(sp: Split, cv_num: int) -> Tuple[lgb.Dataset, lgb.Dataset]:
@@ -100,15 +99,20 @@ def convert_to_lgb_dataset(sp: Split, cv_num: int) -> Tuple[lgb.Dataset, lgb.Dat
 
 def train(
     cv_num: int,
+    params: Dict[str, Any],
     train_set: lgb.Dataset,
     valid_sets: List[lgb.Dataset],
     verbose_eval: int,
     early_stopping_rounds: Optional[int] = None,
+    model_number: Optional[int] = None,
 ) -> lgb.Booster:
     config = Config()
-    with timer(f"train CV_{cv_num}", mlflow_on=True):
+    timer_name: str = f"train CV_{cv_num}"
+    if model_number:
+        timer_name += f"_{model_number}"
+    with timer(timer_name, mlflow_on=True):
         model = lgb.train(
-            config.lgbm_params,
+            params,
             train_set,
             num_boost_round=config.num_boost_round,
             verbose_eval=verbose_eval,
@@ -118,24 +122,48 @@ def train(
     return model
 
 
-def predict(cv_num: int, sp: Split, model: lgb.Booster) -> pd.DataFrame:
+def predict(
+    cv_num: int, sp: Split, model: lgb.Booster, model_number: Optional[int] = None
+) -> pd.DataFrame:
     config = Config()
     d_start: int = config.CV_START_DAYS[cv_num]
     d_end: int = config.CV_START_DAYS[cv_num] + 28
     test_pred = sp.test.copy()
     test_pred[config.TARGET + "_true"] = test_pred[config.TARGET]
 
-    with timer(f"predict CV_{cv_num}", mlflow_on=True):
-        test_pred.loc[test_pred.d >= d_start, config.TARGET] = np.nan
-        for d in tqdm(range(d_start, d_end)):
-            test_pred = make_rolling_for_test(test_pred, d, config.features)
-            test_pred.loc[test_pred.d == d, config.TARGET] = model.predict(
-                test_pred.loc[test_pred.d == d, config.features]
-            )
-            test_pred.loc[test_pred.d == d, "sales_is_zero"] = (
-                test_pred.loc[test_pred.d == d, "sales"] == 0
-            ).astype(np.int8)
+    test_pred.loc[test_pred.d >= d_start, config.TARGET] = np.nan
+    for d in tqdm(range(d_start, d_end)):
+        test_pred = make_rolling_for_test(test_pred, d, config.features)
+        test_pred.loc[test_pred.d == d, config.TARGET] = model.predict(
+            test_pred.loc[test_pred.d == d, config.features]
+        )
+        test_pred.loc[test_pred.d == d, "sales_is_zero"] = (
+            test_pred.loc[test_pred.d == d, "sales"] == 0
+        ).astype(np.int8)
 
+    return test_pred
+
+
+def partial_train_and_predict(
+    sp: Split,
+    ids: pd.Series,
+    cv_num: int,
+    model_number: int,
+    objective: Optional[str] = None,
+) -> pd.DataFrame:
+    config = Config()
+    sp_part: Split = Split()
+    sp_part.train = sp.train[sp.train["id"].isin(ids)]
+    sp_part.test = sp.test[sp.test["id"].isin(ids)]
+    train_set, val_set = convert_to_lgb_dataset(sp_part, cv_num)
+    params = config.lgbm_params
+    if objective:
+        params["objective"] = objective
+        params.pop("tweedie_variance_power", None)
+    model = train(
+        cv_num, params, train_set, [val_set], 10, 20, model_number=model_number
+    )
+    test_pred = predict(cv_num, sp_part, model)
     return test_pred
 
 
@@ -181,7 +209,7 @@ def log_metrics(
         test_pred=test_pred[(test_pred.d >= d_start) & (test_pred.d < d_end)],
     )
     evaluator = cv_result.get_evaluator(raw)
-    cv_result.create_dashboard(raw, f"./output/cv/{start_time}/{cv_num}")
+    # cv_result.create_dashboard(raw, f"./output/cv/{start_time}/{cv_num}")
     y_pred = test_pred[(test_pred.d >= d_start) & (test_pred.d < d_end)][config.TARGET]
     y_true = test_true[(test_true.d >= d_start) & (test_true.d < d_end)][config.TARGET]
 
