@@ -102,33 +102,3 @@ class FECatch22(M5):
 
         print(catch22_df.info())
         self.dump(catch22_df)
-
-        # grouped["zero_ratio"] = data.groupby("id")["sales_is_zero"].mean()
-        # grouped["std"] = data.groupby("id")["sales"].agg({"std": "std"})["std"]
-        # grouped["zero_ratio"] = data.groupby("id")["sales_is_zero"].mean()
-        # grouped["std"] = data.groupby("id")["sales"].agg({"std": "std"})["std"]
-        # grouped["sell_price_mean"] = data.groupby("id")["sell_price"].mean()
-        # grouped = pd.concat(
-        #     [
-        #         grouped,
-        #         pd.get_dummies(
-        #             grouped.reset_index("id")["id"].map(
-        #                 lambda x: "_".join(x.split("_")[:1])
-        #             ),
-        #             prefix="genre",
-        #         ).set_index(grouped.index),
-        #     ],
-        #     axis=1,
-        # )
-        # grouped = pd.concat(
-        #     [
-        #         grouped,
-        #         pd.get_dummies(
-        #             grouped.reset_index("id")["id"].map(
-        #                 lambda x: "_".join(x.split("_")[:2])
-        #             ),
-        #             prefix="genre",
-        #         ).set_index(grouped.index),
-        #     ],
-        #     axis=1,
-        # )
