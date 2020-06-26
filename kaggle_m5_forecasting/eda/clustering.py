@@ -102,7 +102,6 @@ with timer("calc grouped aggregates"):
             ),
         }
     )
-grouped["zero_ratio"] = data.groupby("id")["sales_is_zero"].mean()
 grouped["std"] = data.groupby("id")["sales"].agg({"std": "std"})["std"]
 grouped["sell_price_mean"] = data.groupby("id")["sell_price"].mean()
 grouped = pd.concat(
@@ -157,7 +156,6 @@ scaled = sklearn.preprocessing.StandardScaler().fit_transform(
             "SC_FluctAnal_2_rsrangefit_50_1_logi_prop_r1",
             "SP_Summaries_welch_rect_area_5_1",
             "SP_Summaries_welch_rect_centroid",
-            "zero_ratio",
             "sell_price_mean",
             # "genre_FOODS",
             # "genre_HOBBIES",
