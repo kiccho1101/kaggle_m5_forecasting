@@ -16,13 +16,16 @@ def target_encoding(train_df: pd.DataFrame) -> pd.DataFrame:
         ["item_id"],
         ["item_id", "tm_dw"],
         ["store_id", "cat_id"],
-        ["store_id", "dept_id"],
-        ["store_id", "dept_id", "tm_dw"],
+        ["state_id", "item_id"],
+        ["state_id", "item_id", "tm_dw"],
         ["store_id", "item_id"],
         ["store_id", "item_id", "tm_dw"],
+        ["store_id", "item_id", "tm_d"],
+        ["store_id", "item_id", "tm_w"],
+        ["store_id", "item_id", "tm_m"],
     ]
     result: List[Tuple[List[str], pd.DataFrame]] = []
-    methods = ["mean", "std", "skew"]
+    methods = ["mean", "std"]
     with timer("target encoding"):
         for group_key in tqdm(group_keys):
             columns = []
