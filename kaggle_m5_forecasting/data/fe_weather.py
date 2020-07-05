@@ -27,6 +27,7 @@ def read_weather_data(external_data_path: str = "./external_data") -> pd.DataFra
             f"fe_weather_{col}" if col not in ["date_time", "state_id"] else col
             for col in weather.columns
         ]
+        print(weather.columns)
     return weather
 
 
@@ -44,6 +45,8 @@ class FEWeather(M5):
         weather = read_weather_data()
         weather = weather[
             [
+                "date_time",
+                "state_id",
                 "fe_weather_mintempC",
                 "fe_weather_maxtempC",
                 "fe_weather_humidity",
@@ -53,9 +56,8 @@ class FEWeather(M5):
         ]
 
         with timer("merge data"):
-            data = data.merge(
-                raw.calendar[["d", "date_time"]], on="d", how="left"
-            ).merge(weather, on=["date_time", "state_id"], how="left")
+            data = data.merge(raw.calendar[["d", "date_time"]], on="d", how="left")
+            data = data.merge(weather, on=["date_time", "state_id"], how="left")
 
         df = data.filter(like="fe_weather_")
         print(df.info())

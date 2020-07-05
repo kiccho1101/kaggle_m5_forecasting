@@ -6,6 +6,7 @@ from kaggle_m5_forecasting.data.fe_price_basic import FEPriceBasic
 from kaggle_m5_forecasting.data.fe_shift import FEShift
 from kaggle_m5_forecasting.data.fe_rolling import (
     FERollingMean,
+    FERollingDWMean,
     FERollingGroupMean,
     FERollingGroupStd,
     FERollingStd,
@@ -19,6 +20,8 @@ from kaggle_m5_forecasting.data.fe_catch22_pca import FECatch22PCA
 from kaggle_m5_forecasting.data.fe_weather import FEWeather
 from kaggle_m5_forecasting.data.fe_unemployment import FEUnemployment
 from kaggle_m5_forecasting.data.fe_stock import FEStock
+from kaggle_m5_forecasting.data.fe_event import FEEvent
+from kaggle_m5_forecasting.data.fe_event_strength import FEEventStrength
 from kaggle_m5_forecasting.data.split_data import SplitValData, SplitData
 from kaggle_m5_forecasting.data.target_encoding import TEValData, TEData
 from kaggle_m5_forecasting.data.target_encoding_catch22 import (
@@ -30,4 +33,5 @@ from kaggle_m5_forecasting.data.combine_features import (
     CombineFeatures,
 )
 from kaggle_m5_forecasting.task.lgbm_cv import LGBMCrossValidation
+from kaggle_m5_forecasting.task.lgbm_cls_cv import LGBMClassifierCrossValidation
 from kaggle_m5_forecasting.task.lgbm_submission import LGBMSubmission
