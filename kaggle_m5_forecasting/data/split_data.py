@@ -22,10 +22,10 @@ class SplitValData(M5):
 
         for cv_start_day in tqdm(config.CV_START_DAYS):
             sp_idx: SplitIndex = SplitIndex()
-            train_df = data[(data.d > config.START_DAY) & (data.d < cv_start_day)]
+            train_df = data[data.d < cv_start_day]
             sp_idx.train = list(
-                train_df.sample(int(len(data) * config.CV_SAMPLE_RATE)).index
-                # train_df.index
+                # train_df.sample(int(len(data) * config.CV_SAMPLE_RATE)).index
+                train_df.index
             )
             sp_idx.test = list(
                 data[
