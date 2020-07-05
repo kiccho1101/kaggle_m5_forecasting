@@ -1,15 +1,12 @@
 from kaggle_m5_forecasting import M5, MakeData
 from kaggle_m5_forecasting.utils import (
     timer,
-    reduce_mem_usage,
-    print_mem_usage,
     df_parallelize_run,
 )
 from typing import List, Any
 from tqdm import tqdm
 import pandas as pd
 import numpy as np
-import gc
 
 
 def make_lag_roll(LAG_WSIZE: List[Any]):
@@ -34,18 +31,23 @@ def make_lag_roll(LAG_WSIZE: List[Any]):
 
     else:
         col_name = f"fe_rolling_{method}_t{lag}_{w_size}"
-        group = df.groupby("id")
         with timer("create {}".format(col_name)):
             if method == "mean":
                 df[col_name] = (
-                    group["sales"]
+                    df.groupby("id")["sales"]
                     .transform(lambda x: x.shift(lag).rolling(w_size).mean())
                     .astype(np.float16)
                 )
             if method == "std":
                 df[col_name] = (
-                    group["sales"]
+                    df.groupby("id")["sales"]["sales"]
                     .transform(lambda x: x.shift(lag).rolling(w_size).std())
+                    .astype(np.float16)
+                )
+            if method == "dw_mean":
+                df[col_name] = (
+                    df.groupby(["id", "tm_dw"])["sales"]
+                    .transform(lambda x: x.shift(lag).rolling(w_size).mean())
                     .astype(np.float16)
                 )
 
@@ -99,6 +101,28 @@ class FERollingMean(M5):
         self.dump(df)
 
 
+class FERollingDWMean(M5):
+    def requires(self):
+        return MakeData()
+
+    def run(self):
+        data: pd.DataFrame = self.load()
+        with timer("make rolling mean"):
+            lag_wsize = []
+            for lag in [4]:
+                for w_size in [1, 4, 8, 16]:
+                    lag_wsize.append(
+                        [data[["id", "d", "tm_dw", "sales"]], lag, w_size, "dw_mean"]
+                    )
+            data = pd.concat(
+                [data, df_parallelize_run(make_lag_roll, lag_wsize)], axis=1
+            )
+        df = data.filter(like="fe_rolling_dw_mean")
+        print(df.info())
+
+        self.dump(df)
+
+
 class FERollingGroupMean(M5):
     def requires(self):
         return MakeData()
@@ -108,18 +132,13 @@ class FERollingGroupMean(M5):
         groups = [
             ["item_id"],
             ["store_id"],
-            # ["cat_id"],
-            ["dept_id"],
-            ["store_id", "cat_id"],
-            ["store_id", "dept_id"],
             ["state_id", "item_id"],
         ]
         with timer("make rolling cat_id, item_id mean"):
             # lag_wsize = []
             for group in tqdm(groups):
-                # for lag in tqdm([7, 28]):
                 for lag in tqdm([28]):
-                    for w_size in tqdm([7, 30, 60, 90, 180]):
+                    for w_size in tqdm([7, 30, 180]):
                         col_name = "fe_rolling_{}_mean_{}_{}".format(
                             "_".join(group), lag, w_size
                         )
@@ -141,19 +160,14 @@ class FERollingGroupStd(M5):
     def run(self):
         data: pd.DataFrame = self.load()
         groups = [
-            # ["item_id"],
-            # ["store_id"],
-            # ["cat_id"],
-            # ["dept_id"],
-            # ["store_id", "cat_id"],
-            # ["store_id", "dept_id"],
+            ["item_id"],
+            ["store_id"],
             ["state_id", "item_id"],
         ]
         with timer("make group std"):
             for group in tqdm(groups):
-                # for lag in tqdm([7, 28]):
                 for lag in tqdm([28]):
-                    for w_size in tqdm([7, 30, 90, 180]):
+                    for w_size in tqdm([7, 30, 180]):
                         col_name = "fe_rolling_{}_std_{}_{}".format(
                             "_".join(group), lag, w_size
                         )
