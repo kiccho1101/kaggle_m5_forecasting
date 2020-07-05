@@ -1,4 +1,5 @@
 import lightgbm as lgb
+from lightgbm import LGBMClassifier
 import mlflow
 import mlflow.lightgbm
 import pandas as pd
@@ -18,15 +19,15 @@ from tqdm.autonotebook import tqdm
 def get_run_name() -> str:
     print("please put run_name")
     run_name = input()
+    # run_name = "all data val"
     return run_name
 
 
-def start_mlflow() -> int:
+def start_mlflow(exp_name: str = "cv_new") -> int:
     try:
         mlflow.end_run()
     except Exception:
         pass
-    exp_name = "cv_new"
     if mlflow.get_experiment_by_name(exp_name) is None:
         mlflow.create_experiment(exp_name)
     experiment_id = mlflow.get_experiment_by_name(exp_name).experiment_id
@@ -37,6 +38,8 @@ def delete_unused_features(splits: List[Split]) -> List[Split]:
     config = Config()
     for i in range(len(splits)):
         splits[i].train = splits[i].train[["id", "d", config.TARGET] + config.features]
+        splits[i].test = splits[i].test[["id", "d", config.TARGET] + config.features]
+        splits[i].train = splits[i].train[splits[i].train["d"] >= config.START_DAY]
         print(f"CV{i} train shape:", splits[i].train.shape)
         if config.DROP_NA:
             splits[i].train = splits[i].train.dropna()
@@ -46,7 +49,7 @@ def delete_unused_features(splits: List[Split]) -> List[Split]:
 
 def drop_outliers(splits: List[Split]) -> List[Split]:
     for i in range(len(splits)):
-        # Drop all the christmas data (12-25)
+        # # Drop all the christmas data (12-25)
         splits[i].train = splits[i].train[
             ~splits[i].train["d"].isin([331, 697, 1062, 1427, 1792])
         ]
@@ -56,6 +59,16 @@ def drop_outliers(splits: List[Split]) -> List[Split]:
         ]
         print(f"CV{i} outliers dropped train shape:", splits[i].train.shape)
     return splits
+
+
+def print_nan_ratio(splits: List[Split]):
+    for cv_num, sp in enumerate(splits):
+        nan_ratio = sp.train.isna().sum() / len(sp.train) * 100
+        print(f"CV {cv_num} train nan ratio")
+        print(nan_ratio[nan_ratio > 0].sort_values(ascending=False).head(25))
+        nan_ratio = sp.test.isna().sum() / len(sp.test) * 100
+        print(f"CV {cv_num} test nan ratio")
+        print(nan_ratio[nan_ratio > 0].sort_values(ascending=False).head(25))
 
 
 def log_params():
@@ -69,6 +82,9 @@ def log_params():
     mlflow.log_param("DROP_OUTLIERS", config.DROP_OUTLIERS)
     mlflow.log_param("CV_SAMPLE_RATE", config.CV_SAMPLE_RATE)
     mlflow.log_param("MODEL", config.MODEL)
+    mlflow.log_param("CLS_POSTPROCESSING", config.CLS_POSTPROCESSING)
+    mlflow.log_param("CLS_TIMESTAMP", config.CLS_TIMESTAMP)
+    mlflow.log_param("CLS_THRESHOLD", config.CLS_THRESHOLD)
     mlflow.log_param("features", ",\n".join([f"'{f}'" for f in config.features]))
 
 
@@ -91,8 +107,14 @@ def convert_to_lgb_dataset(sp: Split, cv_num: int) -> Tuple[lgb.Dataset, lgb.Dat
     config = Config()
     train_set = lgb.Dataset(sp.train[config.features], sp.train[config.TARGET])
     val_set = lgb.Dataset(
-        sp.test[sp.test.d > config.CV_START_DAYS[cv_num]][config.features],
-        sp.test[sp.test.d > config.CV_START_DAYS[cv_num]][config.TARGET],
+        sp.test[
+            (sp.test.d >= config.CV_START_DAYS[cv_num])
+            & (sp.test.d < config.CV_START_DAYS[cv_num] + 28)
+        ][config.features],
+        sp.test[
+            (sp.test.d >= config.CV_START_DAYS[cv_num])
+            & (sp.test.d < config.CV_START_DAYS[cv_num] + 28)
+        ][config.TARGET],
     )
     return train_set, val_set
 
@@ -122,6 +144,99 @@ def train(
     return model
 
 
+def train_by_zero(raw: RawData, sp: Split, cv_num: int) -> pd.DataFrame:
+    zero_ids, nonzero_ids = get_zero_nonzero_ids(raw, 0.9)
+    test_pred_zero = partial_train_and_predict(sp, zero_ids, cv_num, 0)
+    test_pred_nonzero = partial_train_and_predict(sp, nonzero_ids, cv_num, 1)
+    test_pred = pd.concat([test_pred_zero, test_pred_nonzero], axis=0)
+    return test_pred
+
+
+def train_by_store(
+    raw: RawData, sp: Split, cv_num: int, SEED: Optional[int] = None
+) -> pd.DataFrame:
+    test_pred = pd.DataFrame()
+    for i, (store_id, ids) in enumerate(
+        [
+            (
+                store_id,
+                raw.sales_train_validation[
+                    raw.sales_train_validation["store_id"] == store_id
+                ]["id"],
+            )
+            for store_id in raw.sales_train_validation["store_id"].unique()
+        ]
+    ):
+        print(store_id)
+        test_pred_part = partial_train_and_predict(sp, ids, cv_num, i, SEED=SEED)
+        test_pred = pd.concat([test_pred, test_pred_part], axis=0)
+    return test_pred
+
+
+def train_by_dept(raw: RawData, sp: Split, cv_num: int) -> pd.DataFrame:
+    test_pred = pd.DataFrame()
+    for i, (dept_id, ids) in enumerate(
+        [
+            (
+                store_id,
+                raw.sales_train_validation[
+                    raw.sales_train_validation["dept_id"] == store_id
+                ]["id"],
+            )
+            for store_id in raw.sales_train_validation["dept_id"].unique()
+        ]
+    ):
+        print(dept_id)
+        test_pred_part = partial_train_and_predict(sp, ids, cv_num, i)
+        test_pred = pd.concat([test_pred, test_pred_part], axis=0)
+    return test_pred
+
+
+def train_by_cat(raw: RawData, sp: Split, cv_num: int) -> pd.DataFrame:
+    test_pred = pd.DataFrame()
+    for i, (cat_id, ids) in enumerate(
+        [
+            (
+                store_id,
+                raw.sales_train_validation[
+                    raw.sales_train_validation["cat_id"] == store_id
+                ]["id"],
+            )
+            for store_id in raw.sales_train_validation["cat_id"].unique()
+        ]
+    ):
+        print(cat_id)
+        test_pred_part = partial_train_and_predict(sp, ids, cv_num, i)
+        test_pred = pd.concat([test_pred, test_pred_part], axis=0)
+    return test_pred
+
+
+def train_cls(
+    cv_num: int,
+    params: Dict[str, Any],
+    train_set: lgb.Dataset,
+    valid_sets: List[lgb.Dataset],
+    verbose_eval: int,
+    early_stopping_rounds: Optional[int] = None,
+    model_number: Optional[int] = None,
+) -> LGBMClassifier:
+    config = Config()
+    timer_name: str = f"train CV_{cv_num}"
+    if model_number:
+        timer_name += f"_{model_number}"
+    with timer(timer_name, mlflow_on=True):
+        model = LGBMClassifier(**config.lgbm_cls_params)
+        model.fit(
+            train_set.data,
+            train_set.label,
+            categorical_feature=config.lgbm_cat_features,
+            eval_set=[(dataset.data, dataset.label) for dataset in valid_sets],
+            eval_metric="logloss,auc,cross_entropy",
+            verbose=10,
+        )
+    return model
+
+
 def predict(
     cv_num: int, sp: Split, model: lgb.Booster, model_number: Optional[int] = None
 ) -> pd.DataFrame:
@@ -144,12 +259,41 @@ def predict(
     return test_pred
 
 
+def predict_cls(
+    sp: Split, cv_num: int, model: LGBMClassifier, val_set: lgb.Dataset
+) -> pd.DataFrame:
+    config = Config()
+    df_val = sp.test[
+        (sp.test.d >= config.CV_START_DAYS[cv_num])
+        & (sp.test.d < config.CV_START_DAYS[cv_num] + 28)
+    ][["id", "d", "sales_is_zero"]]
+    df_val["sales_is_zero_pred"] = model.predict_proba(val_set.data)[:, 1]
+    return df_val
+
+
+def cls_postprocessing(cv_num: int, test_pred: pd.DataFrame) -> pd.DataFrame:
+    with timer("cls_postprocessing"):
+        config = Config()
+        df_val: pd.dataframe = pickle.load(
+            open(f"./output/cv_cls/{config.CLS_TIMESTAMP}/0/df_val.pkl", "rb")
+        )
+        test_pred["tmp_id"] = (
+            test_pred["id"].astype(str) + "_" + test_pred["d"].astype(str)
+        )
+        df_val = df_val[df_val["sales_is_zero_pred"] >= config.CLS_THRESHOLD]
+        tmp_ids = df_val["id"].astype(str) + "_" + df_val["d"].astype(str)
+        test_pred.loc[test_pred["tmp_id"].isin(tmp_ids), "sales"] = 0
+        test_pred.drop(["tmp_id"], axis=1, inplace=True)
+    return test_pred
+
+
 def partial_train_and_predict(
     sp: Split,
     ids: pd.Series,
     cv_num: int,
     model_number: int,
     objective: Optional[str] = None,
+    SEED: Optional[int] = None,
 ) -> pd.DataFrame:
     config = Config()
     sp_part: Split = Split()
@@ -160,8 +304,10 @@ def partial_train_and_predict(
     if objective:
         params["objective"] = objective
         params.pop("tweedie_variance_power", None)
+    if SEED:
+        params["seed"] = SEED
     model = train(
-        cv_num, params, train_set, [val_set], 10, 20, model_number=model_number
+        cv_num, params, train_set, [train_set], 10, 20, model_number=model_number,
     )
     test_pred = predict(cv_num, sp_part, model)
     return test_pred
@@ -209,7 +355,7 @@ def log_metrics(
         test_pred=test_pred[(test_pred.d >= d_start) & (test_pred.d < d_end)],
     )
     evaluator = cv_result.get_evaluator(raw)
-    # cv_result.create_dashboard(raw, f"./output/cv/{start_time}/{cv_num}")
+    cv_result.create_dashboard(raw, f"./output/cv/{start_time}/{cv_num}")
     y_pred = test_pred[(test_pred.d >= d_start) & (test_pred.d < d_end)][config.TARGET]
     y_true = test_true[(test_true.d >= d_start) & (test_true.d < d_end)][config.TARGET]
 
