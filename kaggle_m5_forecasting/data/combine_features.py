@@ -7,6 +7,7 @@ from kaggle_m5_forecasting.data.fe_price_rolling import FEPriceRolling
 from kaggle_m5_forecasting.data.fe_shift import FEShift
 from kaggle_m5_forecasting.data.fe_rolling import (
     FERollingMean,
+    FERollingDWMean,
     FERollingGroupMean,
     FERollingGroupStd,
     FERollingStd,
@@ -16,6 +17,8 @@ from kaggle_m5_forecasting.data.fe_rolling import (
 from kaggle_m5_forecasting.data.fe_catch22_pca import FECatch22PCA
 from kaggle_m5_forecasting.data.fe_weather import FEWeather
 from kaggle_m5_forecasting.data.fe_stock import FEStock
+from kaggle_m5_forecasting.data.fe_event import FEEvent
+from kaggle_m5_forecasting.data.fe_event_strength import FEEventStrength
 from kaggle_m5_forecasting.data.fe_unemployment import FEUnemployment
 from kaggle_m5_forecasting.data.target_encoding import TEValData, TEData
 from kaggle_m5_forecasting.data.split_data import SplitValData, SplitData
@@ -37,6 +40,7 @@ class CombineValFeatures(M5):
             fe_price_basic=FEPriceBasic(),
             fe_shift=FEShift(),
             fe_rolling_mean=FERollingMean(),
+            fe_rolling_dw_mean=FERollingDWMean(),
             fe_rolling_group_mean=FERollingGroupMean(),
             fe_rolling_group_std=FERollingGroupStd(),
             fe_rolling_std=FERollingStd(),
@@ -46,6 +50,8 @@ class CombineValFeatures(M5):
             fe_weather=FEWeather(),
             fe_unemployment=FEUnemployment(),
             fe_stock=FEStock(),
+            fe_event=FEEvent(),
+            fe_event_strength=FEEventStrength(),
             te_val_data=TEValData(),
         )
 
@@ -60,6 +66,7 @@ class CombineValFeatures(M5):
                         self.load("fe_price_basic"),
                         self.load("fe_shift"),
                         self.load("fe_rolling_mean"),
+                        self.load("fe_rolling_dw_mean"),
                         self.load("fe_rolling_group_mean"),
                         self.load("fe_rolling_group_std"),
                         self.load("fe_rolling_std"),
@@ -68,6 +75,8 @@ class CombineValFeatures(M5):
                         self.load("fe_weather"),
                         self.load("fe_unemployment"),
                         self.load("fe_stock"),
+                        self.load("fe_event"),
+                        self.load("fe_event_strength"),
                         self.load("fe_catch22_pca"),
                     ],
                     axis=1,
@@ -102,6 +111,7 @@ class CombineFeatures(M5):
             fe_price_basic=FEPriceBasic(),
             fe_shift=FEShift(),
             fe_rolling_mean=FERollingMean(),
+            fe_rolling_dw_mean=FERollingDWMean(),
             fe_rolling_group_mean=FERollingGroupMean(),
             fe_rolling_group_std=FERollingGroupStd(),
             fe_rolling_std=FERollingStd(),
@@ -111,6 +121,8 @@ class CombineFeatures(M5):
             fe_weather=FEWeather(),
             fe_unemployment=FEUnemployment(),
             fe_stock=FEStock(),
+            fe_event=FEEvent(),
+            fe_event_strength=FEEventStrength(),
             te_data=TEData(),
         )
 
@@ -125,6 +137,7 @@ class CombineFeatures(M5):
                         self.load("fe_price_basic"),
                         self.load("fe_shift"),
                         self.load("fe_rolling_mean"),
+                        self.load("fe_rolling_dw_mean"),
                         self.load("fe_rolling_group_mean"),
                         self.load("fe_rolling_group_std"),
                         self.load("fe_rolling_std"),
@@ -135,6 +148,8 @@ class CombineFeatures(M5):
                         self.load("fe_weather"),
                         self.load("fe_unemployment"),
                         self.load("fe_stock"),
+                        self.load("fe_event"),
+                        self.load("fe_event_strength"),
                     ],
                     axis=1,
                 )
