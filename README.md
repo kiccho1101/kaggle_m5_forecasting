@@ -1,6 +1,18 @@
 # kaggle_m5_forecasting
 
-Solution for Kaggle M5 Forecasting Competition (https://www.kaggle.com/c/m5-forecasting-accuracy/overview)
+My 207th🥈solution for Kaggle M5 Forecasting Competition (https://www.kaggle.com/c/m5-forecasting-accuracy/overview)
+
+![lb_result.png](appendix/lb_result.png)
+
+## Features
+
+- Rolling mean, std
+- Rolling grouped mean, std
+- Shift
+- Discount rate
+- Event strength
+- catch22 features
+- Target encoding features
 
 ## PB LeaderBoard History
 
