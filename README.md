@@ -61,8 +61,8 @@ luigid
 mlflow ui
 ```
 
-## Step4. Create submission file
+## Step4. Run the cross validation
 
 ```bash
-pipenv run python main.py m5.LGBMSubmission
+pipenv run python main.py m5.LGBMCrossValidation
 ```

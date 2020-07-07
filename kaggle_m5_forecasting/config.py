@@ -141,12 +141,6 @@ class Config:
         "fe_catch22_pca_0",
         "fe_catch22_pca_1",
         "fe_catch22_pca_2",
-        "fe_weather_mintempC",
-        "fe_weather_humidity",
-        "fe_weather_sunHour",
-        "fe_weather_cloudcover",
-        "fe_unemployment",
-        "fe_stock_volume",
         "fe_rolling_store_id_mean_28_30",
         "fe_rolling_store_id_std_28_30",
     ]
