@@ -2,6 +2,8 @@
 
 My 207th🥈solution for Kaggle M5 Forecasting Competition (https://www.kaggle.com/c/m5-forecasting-accuracy/overview)
 
+The detail of the solution: https://github.com/kiccho1101/paper/blob/master/Kaggle/M5.md
+
 ![lb_result.png](appendix/lb_result.png)
 
 ## Features
