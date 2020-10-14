@@ -34,4 +34,3 @@ from kaggle_m5_forecasting.data.combine_features import (
 )
 from kaggle_m5_forecasting.task.lgbm_cv import LGBMCrossValidation
 from kaggle_m5_forecasting.task.lgbm_cls_cv import LGBMClassifierCrossValidation
-from kaggle_m5_forecasting.task.lgbm_submission import LGBMSubmission

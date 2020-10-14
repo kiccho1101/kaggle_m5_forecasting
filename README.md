@@ -52,16 +52,16 @@ sh install_lightgbm_2.3.2.sh
 
 ## Step2. Download data
 
-Put them in ./m5-forecasting-accuracy directory.
+Unzip it and put the csv files in ./kaggle_m5_forecasting/ directory.
 
 ## Step3. Start up luigi / mlflow server (in other terminal windows)
 
 ```bash
-luigid
+luigid  # localhost:8082
 ```
 
 ```bash
-mlflow ui
+mlflow ui  # localhost:5000
 ```
 
 ## Step4. Run the cross validation

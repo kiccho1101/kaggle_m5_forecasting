@@ -5,6 +5,8 @@ from kaggle_m5_forecasting.data.load_data import LoadRawData, RawData
 from kaggle_m5_forecasting.data.make_data import MakeData
 from kaggle_m5_forecasting.utils import timer
 
+import os
+
 
 def read_weather_data(external_data_path: str = "./external_data") -> pd.DataFrame:
     files: Dict[str, int] = {
@@ -13,21 +15,22 @@ def read_weather_data(external_data_path: str = "./external_data") -> pd.DataFra
         "wisconsinw.csv": 2,
     }
 
+    weather = pd.DataFrame()
     with timer("load weather data"):
-        weather = pd.DataFrame()
-        for file_name, state_id in files.items():
-            _tmp_weather = pd.read_csv(f"{external_data_path}/weather/{file_name}")
-            _tmp_weather["state_id"] = state_id
-            _tmp_weather["date_time"] = pd.to_datetime(
-                _tmp_weather["date_time"]
-            ).dt.strftime("%Y-%m-%d")
-            weather = pd.concat([weather, _tmp_weather], axis=0)
-            del _tmp_weather
-        weather.columns = [
-            f"fe_weather_{col}" if col not in ["date_time", "state_id"] else col
-            for col in weather.columns
-        ]
-        print(weather.columns)
+        if os.path.exists(f"{external_data_path}/weather"):
+            for file_name, state_id in files.items():
+                _tmp_weather = pd.read_csv(f"{external_data_path}/weather/{file_name}")
+                _tmp_weather["state_id"] = state_id
+                _tmp_weather["date_time"] = pd.to_datetime(
+                    _tmp_weather["date_time"]
+                ).dt.strftime("%Y-%m-%d")
+                weather = pd.concat([weather, _tmp_weather], axis=0)
+                del _tmp_weather
+            weather.columns = [
+                f"fe_weather_{col}" if col not in ["date_time", "state_id"] else col
+                for col in weather.columns
+            ]
+            print(weather.columns)
     return weather
 
 

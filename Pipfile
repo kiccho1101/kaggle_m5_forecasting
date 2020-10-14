@@ -52,6 +52,7 @@ tsfresh = "*"
 pandas = "*"
 workalendar = "*"
 beautifulsoup4 = "*"
+lightgbm = "*"
 
 [requires]
 python_version = "3.7"
